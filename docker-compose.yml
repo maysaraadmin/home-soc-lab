@@ -1,55 +1,139 @@
 version: "3.8"
 
+# Define common environment variables
+x-common-env: &common-env
+  TZ: ${TZ:-UTC}
+  # Security: Disable debug mode in production
+  NODE_ENV: ${NODE_ENV:-production}
+  # Performance tuning
+  NODE_OPTIONS: "--max-old-space-size=4096"
+  # Security headers
+  SECURE_HEADERS_ENABLED: "true"
+  # Logging
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
 services:
+  # Wazuh Manager - Core security monitoring
   wazuh.manager:
-    image: wazuh/wazuh-manager:4.8.0
+    image: wazuh/wazuh-manager:${WAZUH_VERSION:-4.8.0}
     container_name: wazuh-manager
     hostname: wazuh-manager
     restart: unless-stopped
+    # Security: Drop all capabilities and add only required ones
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+      - NET_RAW
+    # Read-only root filesystem
+    read_only: true
+    # Security: Disable inter-container communication
+    network_mode: "service:wazuh.manager"
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '${WAZUH_MANAGER_CPUS:-2}'
+          memory: ${WAZUH_MANAGER_MEMORY:-2G}
+    # Ports
     ports:
-      - "1514:1514/udp"
-      - "1515:1515"
-      - "55000:55000"
+      - "1514:1514/udp"  # Syslog
+      - "1515:1515/tcp"  # Agent registration
+      - "55000:55000/tcp"  # API
+    # Volumes
     volumes:
       - wazuh-manager-data:/var/ossec/data
+      - wazuh-manager-logs:/var/ossec/logs
+      - ./config/wazuh/ossec.conf:/var/ossec/etc/ossec.conf:ro
       - /etc/localtime:/etc/localtime:ro
+    # Environment variables
     environment:
-      - "API_USERNAME=wazuh"
-      - "API_PASSWORD=wazuh"
+      <<: *common-env
+      # Security: Use environment variables for sensitive data
+      - API_USERNAME=${WAZUH_API_USER:-wazuh}
+      - API_PASSWORD=${WAZUH_API_PASSWORD:-ChangeMe!123}
+      # Performance tuning
+      - WAZUH_CLUSTER_DISABLED=yes
+      - WAZUH_METRICS_ENABLED=yes
+    # Health checks
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:55000"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
+    # Security: Restart on failure with delay
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 3
+      window: 120s
 
+  # Wazuh Indexer - Data storage and search
   wazuh.indexer:
-    image: wazuh/wazuh-indexer:4.8.0
+    image: wazuh/wazuh-indexer:${WAZUH_INDEXER_VERSION:-4.8.0}
     container_name: wazuh-indexer
     hostname: wazuh-indexer
     restart: unless-stopped
-    environment:
-      - "discovery.type=single-node"
-      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
-      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=admin"
+    # Security: Drop all capabilities and add only required ones
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    # Read-only root filesystem
+    read_only: true
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '${WAZUH_INDEXER_CPUS:-2}'
+          memory: ${WAZUH_INDEXER_MEMORY:-4G}
+    # Ports
     ports:
-      - "9200:9200"
-      - "9600:9600"
-      - "9700:9700"
+      - "9200:9200/tcp"  # REST API
+      - "9600:9600/tcp"  # Node communication
+      - "9700:9700/tcp"  # Cluster communication
+    # Volumes
     volumes:
       - wazuh-indexer-data:/var/lib/wazuh-indexer
+      - wazuh-indexer-logs:/var/log/wazuh-indexer
+      - ./config/wazuh-indexer/opensearch.yml:/usr/share/wazuh-indexer/config/opensearch.yml:ro
       - /etc/localtime:/etc/localtime:ro
+    # Environment variables
+    environment:
+      <<: *common-env
+      # Security: Use environment variables for sensitive data
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD:-ChangeMe!123}
+      # Performance tuning
+      - DISABLE_SECURITY_PLUGIN=false
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - OPENSEARCH_JAVA_OPTS=-Xms${OPENSEARCH_HEAP_SIZE:-1g} -Xmx${OPENSEARCH_HEAP_SIZE:-1g} -XX:MaxDirectMemorySize=512m
+      # Cluster configuration
+      - cluster.name=wazuh-cluster
+      - node.name=wazuh-indexer
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - plugins.security.ssl.http.enabled=true
+    # Health checks
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health?wait_for_status=yellow"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+    # Security: Restart on failure with delay
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 3
+      window: 120s
+    # System requirements
     ulimits:
       memlock:
         soft: -1
@@ -57,169 +141,488 @@ services:
       nofile:
         soft: 65535
         hard: 65535
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 4G
 
+  # Wazuh Dashboard - Web interface
   wazuh.dashboard:
-    image: wazuh/wazuh-dashboard:4.8.0
+    image: wazuh/wazuh-dashboard:${WAZUH_DASHBOARD_VERSION:-4.8.0}
     container_name: wazuh-dashboard
     hostname: wazuh-dashboard
     restart: unless-stopped
+    # Security: Drop all capabilities
+    cap_drop:
+      - ALL
+    # Read-only root filesystem
+    read_only: true
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '${WAZUH_DASHBOARD_CPUS:-1.5}'
+          memory: ${WAZUH_DASHBOARD_MEMORY:-2G}
+    # Ports
     ports:
-      - "5601:5601"
-    environment:
-      - "OPENSEARCH_HOSTS=https://wazuh.indexer:9200"
-      - "OPENSEARCH_USERNAME=admin"
-      - "OPENSEARCH_PASSWORD=admin"
-      - "DASHBOARDS_VERIFY_SSL=false"
+      - "5601:5601/tcp"
+    # Volumes
     volumes:
+      - wazuh-dashboard-data:/usr/share/wazuh-dashboard/data
+      - wazuh-dashboard-logs:/var/log/wazuh-dashboard
+      - ./config/wazuh-dashboard/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml:ro
       - /etc/localtime:/etc/localtime:ro
-    depends_on:
-      wazuh.indexer:
-        condition: service_healthy
+    # Environment variables
+    environment:
+      <<: *common-env
+      # Security: Use environment variables for sensitive data
+      - OPENSEARCH_HOSTS=https://wazuh.indexer:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD:-ChangeMe!123}
+      - DASHBOARDS_VERIFY_SSL=true
+      # Performance tuning
+      - NODE_OPTIONS=--max-old-space-size=2048
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=5601
+      - SERVER_BASE_PATH=/dashboard
+      # Security headers
+      - SERVER_SECURITY_HEADERS_ENABLED=true
+      - SERVER_SECURITY_HEADERS_PERMISSION_POLICY="camera=(), microphone=(), geolocation=()"
+    # Health checks
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5601"]
+      test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
-    deploy:
-      resources:
-        limits:
-          cpus: '1.5'
-          memory: 2G
+    # Dependencies
+    depends_on:
+      wazuh.indexer:
+        condition: service_healthy
+    # Security: Restart on failure with delay
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 3
+      window: 120s
 
+  # TheHive - Case Management
   thehive:
-    image: strangebee/thehive:5.2
+    image: strangebee/thehive:${THEHIVE_VERSION:-5.2}
     container_name: thehive
     hostname: thehive
     restart: unless-stopped
+    # Security: Drop all capabilities
+    cap_drop:
+      - ALL
+    # Read-only root filesystem
+    read_only: true
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '${THEHIVE_CPUS:-2}'
+          memory: ${THEHIVE_MEMORY:-4G}
+    # Ports
     ports:
-      - "9000:9000"
-    environment:
-      - "CONFIG_SECRET=${THEHIVE_SECRET:-change-me-to-a-secure-secret}"
-      - "JAVA_OPTS=-Xmx2g -Xms1g"
+      - "9000:9000/tcp"
+    # Volumes
     volumes:
       - thehive-data:/var/lib/thehive
+      - thehive-logs:/var/log/thehive
+      - ./config/thehive/application.conf:/etc/thehive/application.conf:ro
       - /etc/localtime:/etc/localtime:ro
+    # Environment variables
+    environment:
+      <<: *common-env
+      # Security: Use environment variables for sensitive data
+      - CONFIG_SECRET=${THEHIVE_SECRET:-$(openssl rand -hex 32)}
+      # Database configuration
+      - THEHIVE_DATA_DIR=/var/lib/thehive
+      - THEHIVE_CONFIG_FILE=/etc/thehive/application.conf
+      # Performance tuning
+      - JAVA_OPTS=-Xmx${THEHIVE_HEAP_SIZE:-2g} -Xms${THEHIVE_HEAP_SIZE:-2g} -Dconfig.file=/etc/thehive/application.conf -Dlogger.file=/etc/thehive/logback.xml
+      # Security
+      - THEHIVE_AUTH_PROVIDER=localAuth
+      - THEHIVE_AUTH_LOCAL_USERS_CREDENTIALS=/etc/thehive/users.conf
+      # Email configuration
+      - THEHIVE_EMAIL_ENABLED=false
+      - THEHIVE_EMAIL_HOST=smtp.example.com
+      - THEHIVE_EMAIL_PORT=587
+      - THEHIVE_EMAIL_USER=user@example.com
+      - THEHIVE_EMAIL_PASSWORD=ChangeMe123
+      - THEHIVE_EMAIL_FROM=thehive@example.com
+      # Other settings
+      - THEHIVE_ANALYZE_REPORT_MAX_SIZE=10MB
+      - THEHIVE_ANALYZE_ARTIFACT_MAX_SIZE=10MB
+    # Health checks
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/api/status"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 4G
+      start_period: 120s  # TheHive takes longer to start
+    # Security: Restart on failure with delay
+    restart_policy:
+      condition: on-failure
+      delay: 10s
+      max_attempts: 3
+      window: 300s
 
+  # Cortex - Analysis Engine
   cortex:
-    image: thehiveproject/cortex:3.1.6
+    image: thehiveproject/cortex:${CORTEX_VERSION:-3.1.6}
     container_name: cortex
     hostname: cortex
     restart: unless-stopped
+    # Security: Drop all capabilities
+    cap_drop:
+      - ALL
+    # Read-only root filesystem
+    read_only: true
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '${CORTEX_CPUS:-2}'
+          memory: ${CORTEX_MEMORY:-4G}
+    # Ports
     ports:
-      - "9001:9001"
-    environment:
-      - "CONFIG_SECRET=${CORTEX_SECRET:-change-me-to-a-secure-secret}"
-      - "JAVA_OPTS=-Xmx2g -Xms1g"
+      - "9001:9001/tcp"
+    # Volumes
     volumes:
       - cortex-data:/var/lib/cortex
+      - cortex-logs:/var/log/cortex
+      - ./config/cortex/application.conf:/etc/cortex/application.conf:ro
       - /etc/localtime:/etc/localtime:ro
+    # Environment variables
+    environment:
+      <<: *common-env
+      # Security: Use environment variables for sensitive data
+      - CONFIG_SECRET=${CORTEX_SECRET:-$(openssl rand -hex 32)}
+      # Database configuration
+      - CORTEX_DATA_DIR=/var/lib/cortex
+      - CORTEX_CONFIG_FILE=/etc/cortex/application.conf
+      # Performance tuning
+      - JAVA_OPTS=-Xmx${CORTEX_HEAP_SIZE:-2g} -Xms${CORTEX_HEAP_SIZE:-2g} -Dconfig.file=/etc/cortex/application.conf -Dlogger.file=/etc/cortex/logback.xml
+      # Security
+      - CORTEX_AUTH_PROVIDER=local
+      # Integration with TheHive
+      - CORTEX_THEHIVE_URL=http://thehive:9000
+      - CORTEX_THEHIVE_TOKEN=${THEHIVE_CORTEX_TOKEN:-$(openssl rand -hex 32)}
+      # Analyzer configuration
+      - CORTEX_ANALYZERS_PATH=/opt/Cortex-Analyzers/analyzers
+      - CORTEX_RESPONDERS_PATH=/opt/Cortex-Analyzers/responders
+      - CORTEX_ANALYZERS_CHECK_FREQ=300
+    # Health checks
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9001/api/status"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 120s  # Cortex takes longer to start
+    # Dependencies
     depends_on:
-      - thehive
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 4G
+      thehive:
+        condition: service_healthy
+    # Security: Restart on failure with delay
+    restart_policy:
+      condition: on-failure
+      delay: 10s
+      max_attempts: 3
+      window: 300s
 
+  # FAISS Service - Vector Similarity Search
   faiss-service:
     build: 
       context: ./faiss-service
       dockerfile: Dockerfile
+      args:
+        - PYTHON_VERSION=${PYTHON_VERSION:-3.9}
+        - FAISS_VERSION=${FAISS_VERSION:-1.7.4}
     container_name: faiss-service
     hostname: faiss-service
     restart: unless-stopped
-    ports:
-      - "7860:7860"
-    environment:
-      - TZ=Etc/UTC
-      - PYTHONUNBUFFERED=1
-      - FAISS_INDEX_PATH=/app/data/faiss_index
-      - VECTOR_DIMENSION=128
-    volumes:
-      - faiss-data:/app/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7860/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    depends_on:
-      - wazuh.indexer
-      - thehive
+    # Security: Drop all capabilities
+    cap_drop:
+      - ALL
+    # Read-only root filesystem
+    read_only: true
+    # Resource limits
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: 1G
+          cpus: '${FAISS_SERVICE_CPUS:-1}'
+          memory: ${FAISS_SERVICE_MEMORY:-1G}
+    # Ports
+    ports:
+      - "7860:7860/tcp"
+    # Volumes
+    volumes:
+      - faiss-data:/app/data
+      - faiss-service-logs:/app/logs
+      - ./config/faiss-service/config.yaml:/app/config.yaml:ro
+      - /etc/localtime:/etc/localtime:ro
+    # Environment variables
+    environment:
+      <<: *common-env
+      # Application settings
+      - PORT=7860
+      - HOST=0.0.0.0
+      - WORKERS=${FAISS_SERVICE_WORKERS:-2}
+      - TIMEOUT=120
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # FAISS configuration
+      - FAISS_INDEX_PATH=/app/data/faiss_index
+      - VECTOR_DIMENSION=${FAISS_VECTOR_DIMENSION:-128}
+      - MAX_INDEX_SIZE=${FAISS_MAX_INDEX_SIZE:-1000000}
+      # Authentication (optional)
+      - AUTH_ENABLED=${FAISS_AUTH_ENABLED:-false}
+      - API_KEYS=${FAISS_API_KEYS:-}
+      # CORS
+      - CORS_ORIGINS=${CORS_ORIGINS:-'["*"]'}
+      - CORS_METHODS=GET,POST,OPTIONS
+      - CORS_HEADERS=Content-Type,Authorization
+    # Health checks
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Dependencies
+    depends_on:
+      wazuh.indexer:
+        condition: service_healthy
+      thehive:
+        condition: service_healthy
+    # Security: Restart on failure with delay
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 3
+      window: 120s
 
   streamlit-dashboard:
     build: 
       context: ./streamlit-dashboard
       dockerfile: Dockerfile
+      args:
+        - PYTHON_VERSION=${PYTHON_VERSION:-3.9}
     container_name: streamlit-dashboard
     hostname: streamlit-dashboard
     restart: unless-stopped
+    # Security: Drop all capabilities
+    cap_drop:
+      - ALL
+    # Read-only root filesystem
+    read_only: true
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '${STREAMLIT_CPUS:-1}'
+          memory: ${STREAMLIT_MEMORY:-1G}
+    # Ports
     ports:
-      - "8501:8501"
+      - "8501:8501/tcp"
+    # Volumes
+    volumes:
+      - streamlit-data:/app/data
+      - streamlit-logs:/app/logs
+      - ./config/streamlit/config.toml:/app/.streamlit/config.toml:ro
+      - /etc/localtime:/etc/localtime:ro
+    # Environment variables
     environment:
-      - TZ=Etc/UTC
-      - PYTHONUNBUFFERED=1
+      <<: *common-env
+      # Application settings
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+      - STREAMLIT_SERVER_ENABLE_CORS=true
+      - STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=true
+      - STREAMLIT_SERVER_ENABLE_CSRF_PROTECTION=true
+      # Service endpoints
       - THEHIVE_URL=http://thehive:9000
       - THEHIVE_API_KEY=${THEHIVE_API_KEY:-change-me}
       - FAISS_SERVICE_URL=http://faiss-service:7860
-    env_file:
-      - .env
+      - CORTEX_URL=http://cortex:9001
+      - CORTEX_API_KEY=${CORTEX_API_KEY:-change-me}
+      # Authentication (optional)
+      - AUTH_ENABLED=${DASHBOARD_AUTH_ENABLED:-false}
+      - AUTH_USERNAME=${DASHBOARD_USERNAME:-admin}
+      - AUTH_PASSWORD=${DASHBOARD_PASSWORD:-ChangeMe123}
+      # Feature flags
+      - ENABLE_ANALYTICS=${DASHBOARD_ANALYTICS:-false}
+      - ENABLE_TELEMETRY=${DASHBOARD_TELEMETRY:-false}
+    # Health checks
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Dependencies
     depends_on:
       thehive:
         condition: service_healthy
       faiss-service:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
+      cortex:
+        condition: service_healthy
+    # Security: Restart on failure with delay
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 3
+      window: 120s
 
+# Volumes for persistent data
 volumes:
+  # Wazuh volumes
   wazuh-manager-data:
     name: wazuh-manager-data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/wazuh/manager
+  wazuh-manager-logs:
+    name: wazuh-manager-logs
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/wazuh/logs/manager
   wazuh-indexer-data:
     name: wazuh-indexer-data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/wazuh/indexer
+  wazuh-indexer-logs:
+    name: wazuh-indexer-logs
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/wazuh/logs/indexer
+  wazuh-dashboard-data:
+    name: wazuh-dashboard-data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/wazuh/dashboard
+  wazuh-dashboard-logs:
+    name: wazuh-dashboard-logs
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/wazuh/logs/dashboard
+  
+  # TheHive volumes
   thehive-data:
     name: thehive-data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/thehive/data
+  thehive-logs:
+    name: thehive-logs
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/thehive/logs
+  
+  # Cortex volumes
   cortex-data:
     name: cortex-data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/cortex/data
+  cortex-logs:
+    name: cortex-logs
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/cortex/logs
+  
+  # FAISS Service volumes
   faiss-data:
     name: faiss-data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/faiss/data
+  faiss-service-logs:
+    name: faiss-service-logs
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/faiss/logs
+  
+  # Streamlit Dashboard volumes
+  streamlit-data:
+    name: streamlit-data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/streamlit/data
+  streamlit-logs:
+    name: streamlit-logs
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/streamlit/logs
+
+# Network configuration
+networks:
+  default:
+    driver: bridge
+    # Enable IPv6
+    enable_ipv6: true
+    # Configure IPAM
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+        - subnet: 2001:3984:3989::/64
+    # Security: Enable encrypted traffic between containers
+    # Note: This requires Docker Swarm or Kubernetes for full encryption
+    # driver_opts:
+    #   com.docker.network.driver.mtu: "1400"
+    #   com.docker.network.bridge.enable_ip_masquerade: "true"
+    #   com.docker.network.bridge.enable_icc: "true"
+    #   com.docker.network.bridge.host_binding_ipv4: "0.0.0.0"
+    #   com.docker.network.driver.options: "com.docker.network.driver.overlay.vxlanid_list=4096"
+
+# Configure resource limits for the entire stack
+# Note: These are global limits that apply to all services
+# Individual service limits can override these
+x-resource-limits: &resource-limits
+  # CPU limits (in CPU units, 1.0 = 1 core)
+  cpus: '${TOTAL_CPUS:-8}'
+  # Memory limits (in bytes, or with K, M, G suffix)
+  memory: ${TOTAL_MEMORY:-16G}
+  # Restart policy
+  restart_policy:
+    condition: on-failure
+    delay: 5s
+    max_attempts: 3
+    window: 120s
+
+# Apply resource limits to all services
+services:
+  <<: [*resource-limits]
 
 # Network configuration
 networks:
