@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  wazuh.manager:
+    image: wazuh/wazuh-manager:latest
+    ports:
+      - "1514:1514/udp"
+      - "1515:1515"
+      - "55000:55000"
+    volumes:
+      - wazuh-manager-data:/var/ossec/data
+
+  wazuh.indexer:
+    image: wazuh/wazuh-indexer:latest
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - wazuh-indexer-data:/var/lib/wazuh-indexer
+
+  wazuh.dashboard:
+    image: wazuh/wazuh-dashboard:latest
+    ports:
+      - "5601:5601"
+
+  thehive:
+    image: strangebee/thehive:latest
+    ports:
+      - "9000:9000"
+    environment:
+      - "CONFIG_SECRET=somesecret"
+
+  cortex:
+    image: thehiveproject/cortex:latest
+    ports:
+      - "9001:9001"
+    environment:
+      - "CONFIG_SECRET=anothersecret"
+
+  shuffle-backend:
+    image: frikky/shuffle:latest
+    ports:
+      - "5001:5001"
+
+  shuffle-frontend:
+    image: frikky/shuffle-ui:latest
+    ports:
+      - "80:80"
+
+  faiss-service:
+    build: ./faiss-service
+    ports:
+      - "7860:7860"
+
+  streamlit-dashboard:
+    build: ./streamlit-dashboard
+    ports:
+      - "8501:8501"
+
+volumes:
+  wazuh-manager-data:
+  wazuh-indexer-data:
