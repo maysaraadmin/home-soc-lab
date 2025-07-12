@@ -2,63 +2,227 @@ version: "3.8"
 
 services:
   wazuh.manager:
-    image: wazuh/wazuh-manager:latest
+    image: wazuh/wazuh-manager:4.8.0
+    container_name: wazuh-manager
+    hostname: wazuh-manager
+    restart: unless-stopped
     ports:
       - "1514:1514/udp"
       - "1515:1515"
       - "55000:55000"
     volumes:
       - wazuh-manager-data:/var/ossec/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - "API_USERNAME=wazuh"
+      - "API_PASSWORD=wazuh"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:55000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
 
   wazuh.indexer:
-    image: wazuh/wazuh-indexer:latest
+    image: wazuh/wazuh-indexer:4.8.0
+    container_name: wazuh-indexer
+    hostname: wazuh-indexer
+    restart: unless-stopped
     environment:
-      - discovery.type=single-node
+      - "discovery.type=single-node"
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=admin"
     ports:
       - "9200:9200"
-      - "9300:9300"
+      - "9600:9600"
+      - "9700:9700"
     volumes:
       - wazuh-indexer-data:/var/lib/wazuh-indexer
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65535
+        hard: 65535
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
 
   wazuh.dashboard:
-    image: wazuh/wazuh-dashboard:latest
+    image: wazuh/wazuh-dashboard:4.8.0
+    container_name: wazuh-dashboard
+    hostname: wazuh-dashboard
+    restart: unless-stopped
     ports:
       - "5601:5601"
+    environment:
+      - "OPENSEARCH_HOSTS=https://wazuh.indexer:9200"
+      - "OPENSEARCH_USERNAME=admin"
+      - "OPENSEARCH_PASSWORD=admin"
+      - "DASHBOARDS_VERIFY_SSL=false"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      wazuh.indexer:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5601"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
 
   thehive:
-    image: strangebee/thehive:latest
+    image: strangebee/thehive:5.2
+    container_name: thehive
+    hostname: thehive
+    restart: unless-stopped
     ports:
       - "9000:9000"
     environment:
-      - "CONFIG_SECRET=somesecret"
+      - "CONFIG_SECRET=${THEHIVE_SECRET:-change-me-to-a-secure-secret}"
+      - "JAVA_OPTS=-Xmx2g -Xms1g"
+    volumes:
+      - thehive-data:/var/lib/thehive
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
 
   cortex:
-    image: thehiveproject/cortex:latest
+    image: thehiveproject/cortex:3.1.6
+    container_name: cortex
+    hostname: cortex
+    restart: unless-stopped
     ports:
       - "9001:9001"
     environment:
-      - "CONFIG_SECRET=anothersecret"
-
-  shuffle-backend:
-    image: frikky/shuffle:latest
-    ports:
-      - "5001:5001"
-
-  shuffle-frontend:
-    image: frikky/shuffle-ui:latest
-    ports:
-      - "80:80"
+      - "CONFIG_SECRET=${CORTEX_SECRET:-change-me-to-a-secure-secret}"
+      - "JAVA_OPTS=-Xmx2g -Xms1g"
+    volumes:
+      - cortex-data:/var/lib/cortex
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      - thehive
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
 
   faiss-service:
-    build: ./faiss-service
+    build: 
+      context: ./faiss-service
+      dockerfile: Dockerfile
+    container_name: faiss-service
+    hostname: faiss-service
+    restart: unless-stopped
     ports:
       - "7860:7860"
+    environment:
+      - TZ=Etc/UTC
+      - PYTHONUNBUFFERED=1
+      - FAISS_INDEX_PATH=/app/data/faiss_index
+      - VECTOR_DIMENSION=128
+    volumes:
+      - faiss-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - wazuh.indexer
+      - thehive
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
 
   streamlit-dashboard:
-    build: ./streamlit-dashboard
+    build: 
+      context: ./streamlit-dashboard
+      dockerfile: Dockerfile
+    container_name: streamlit-dashboard
+    hostname: streamlit-dashboard
+    restart: unless-stopped
     ports:
       - "8501:8501"
+    environment:
+      - TZ=Etc/UTC
+      - PYTHONUNBUFFERED=1
+      - THEHIVE_URL=http://thehive:9000
+      - THEHIVE_API_KEY=${THEHIVE_API_KEY:-change-me}
+      - FAISS_SERVICE_URL=http://faiss-service:7860
+    env_file:
+      - .env
+    depends_on:
+      thehive:
+        condition: service_healthy
+      faiss-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
 
 volumes:
   wazuh-manager-data:
+    name: wazuh-manager-data
   wazuh-indexer-data:
+    name: wazuh-indexer-data
+  thehive-data:
+    name: thehive-data
+  cortex-data:
+    name: cortex-data
+  faiss-data:
+    name: faiss-data
+
+# Network configuration
+networks:
+  default:
+    driver: bridge
+    name: soc-lab-network
