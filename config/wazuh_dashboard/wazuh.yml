@@ -1,7 +1,17 @@
 hosts:
-  - 1513629884013:
-      url: "https://wazuh.manager"
+  - default:
+      url: "https://localhost"
       port: 55000
       username: wazuh-wui
       password: "MyS3cr37P450r.*-"
+      run_as: false
+      url_base_path: "/"
+      validate: true
+      skip_verify: true
+hosts:
+  - 1513629884013:
+      url: http://wazuh.manager:55000
+      port: 55000
+      username: wazuh-wui
+      password: MyS3cr37P450r.*-
       run_as: false
