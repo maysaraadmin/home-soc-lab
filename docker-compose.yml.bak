@@ -16,7 +16,8 @@ services:
       - SETGID
       - SETUID
       - NET_RAW
-    # File system access
+    # Read-only root filesystem
+    read_only: true
     # Resource limits and restart policy
     deploy:
       resources:
@@ -72,7 +73,8 @@ services:
       - DAC_OVERRIDE
       - SETGID
       - SETUID
-    # File system access
+    # Read-only root filesystem
+    read_only: true
     # Resource limits and restart policy
     deploy:
       resources:
@@ -105,7 +107,7 @@ services:
       # Security: Use environment variables for sensitive data
       - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD:-ChangeMe!123}
       # Performance tuning
-      - DISABLE_SECURITY_PLUGIN=true
+      - DISABLE_SECURITY_PLUGIN=false
       - DISABLE_INSTALL_DEMO_CONFIG=true
       - OPENSEARCH_JAVA_OPTS=-Xms${OPENSEARCH_HEAP_SIZE:-1g} -Xmx${OPENSEARCH_HEAP_SIZE:-1g} -XX:MaxDirectMemorySize=512m
       # Cluster configuration
@@ -113,7 +115,7 @@ services:
       - node.name=wazuh-indexer
       - bootstrap.memory_lock=true
       - discovery.type=single-node
-      - plugins.security.ssl.http.enabled=false
+      - plugins.security.ssl.http.enabled=true
     # Health checks
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health?wait_for_status=yellow"]
@@ -139,7 +141,8 @@ services:
     # Security: Drop all capabilities
     cap_drop:
       - ALL
-    # File system access
+    # Read-only root filesystem
+    read_only: true
     # Resource limits and restart policy
     deploy:
       resources:
@@ -168,10 +171,10 @@ services:
       - SECURE_HEADERS_ENABLED=true
       - LOG_LEVEL=${LOG_LEVEL:-info}
       # Security: Use environment variables for sensitive data
-      - OPENSEARCH_HOSTS=http://wazuh.indexer:9200
+      - OPENSEARCH_HOSTS=https://wazuh.indexer:9200
       - OPENSEARCH_USERNAME=admin
       - OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD:-ChangeMe!123}
-      - DASHBOARDS_VERIFY_SSL=false
+      - DASHBOARDS_VERIFY_SSL=true
       # Performance tuning
       - NODE_OPTIONS=--max-old-space-size=2048
       - SERVER_HOST=0.0.0.0
@@ -201,7 +204,8 @@ services:
     # Security: Drop all capabilities
     cap_drop:
       - ALL
-    # File system access
+    # Read-only root filesystem
+    read_only: true
     # Resource limits and restart policy
     deploy:
       resources:
@@ -266,7 +270,8 @@ services:
     # Security: Drop all capabilities
     cap_drop:
       - ALL
-    # File system access
+    # Read-only root filesystem
+    read_only: true
     # Resource limits and restart policy
     deploy:
       resources:
@@ -336,7 +341,8 @@ services:
     # Security: Drop all capabilities
     cap_drop:
       - ALL
-    # File system access
+    # Read-only root filesystem
+    read_only: true
     # Resource limits and restart policy
     deploy:
       resources:
@@ -407,7 +413,8 @@ services:
     # Security: Drop all capabilities
     cap_drop:
       - ALL
-    # File system access
+    # Read-only root filesystem
+    read_only: true
     # Resource limits and restart policy
     deploy:
       resources:
