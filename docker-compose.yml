@@ -60,7 +60,7 @@ services:
 
   # Wazuh Indexer - Data storage and search
   wazuh.indexer:
-    image: wazuh/wazuh-indexer:${WAZUH_INDEXER_VERSION:-4.8.0}
+    image: wazuh/wazuh-indexer:4.8.0
     container_name: wazuh-indexer
     hostname: wazuh-indexer
     restart: unless-stopped
@@ -77,50 +77,43 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '${WAZUH_INDEXER_CPUS:-2}'
-          memory: ${WAZUH_INDEXER_MEMORY:-4G}
+          cpus: '2'
+          memory: 4G
       restart_policy:
         condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
+        delay: 10s
+        max_attempts: 5
+        window: 180s
     # Ports
     ports:
-      - "9200:9200/tcp"  # REST API
-      - "9600:9600/tcp"  # Node communication
-      - "9700:9700/tcp"  # Cluster communication
+      - "9200:9200"  # REST API
+      - "9600:9600"  # Node communication
     # Volumes
     volumes:
       - wazuh-indexer-data:/var/lib/wazuh-indexer
       - wazuh-indexer-logs:/var/log/wazuh-indexer
-      - ./config/wazuh-indexer/opensearch.yml:/usr/share/wazuh-indexer/config/opensearch.yml:ro
       - /etc/localtime:/etc/localtime:ro
     # Environment variables
     environment:
-      - TZ=${TZ:-UTC}
-      - NODE_ENV=${NODE_ENV:-production}
-      - NODE_OPTIONS=--max-old-space-size=4096
-      - SECURE_HEADERS_ENABLED=true
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      # Security: Use environment variables for sensitive data
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD:-ChangeMe!123}
-      # Performance tuning
-      - DISABLE_SECURITY_PLUGIN=true
-      - DISABLE_INSTALL_DEMO_CONFIG=true
-      - OPENSEARCH_JAVA_OPTS=-Xms${OPENSEARCH_HEAP_SIZE:-1g} -Xmx${OPENSEARCH_HEAP_SIZE:-1g} -XX:MaxDirectMemorySize=512m
-      # Cluster configuration
+      - TZ=UTC
+      - NODE_ENV=production
+      - OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g -XX:MaxDirectMemorySize=1g
       - cluster.name=wazuh-cluster
       - node.name=wazuh-indexer
       - bootstrap.memory_lock=true
       - discovery.type=single-node
-      - plugins.security.ssl.http.enabled=false
+      - plugins.security.disabled=true
+      - DISABLE_SECURITY_PLUGIN=true
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=ChangeMe!123
+      - OPENSEARCH_INITIAL_ADMIN_USER=admin
     # Health checks
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health?wait_for_status=yellow"]
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 60s
+      retries: 5
+      start_period: 300s
     # System requirements
     ulimits:
       memlock:
