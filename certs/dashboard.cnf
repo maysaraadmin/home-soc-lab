@@ -1,0 +1,20 @@
+[req] 
+distinguished_name = req_distinguished_name 
+req_extensions = v3_req 
+[req_distinguished_name] 
+C = US 
+ST = California 
+L = San Francisco 
+O = Wazuh 
+OU = Wazuh 
+CN = wazuh.dashboard 
+[v3_req] 
+basicConstraints = CA:FALSE 
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment 
+extendedKeyUsage = serverAuth, clientAuth 
+subjectAltName = @alt_names 
+[alt_names] 
+DNS.1 = wazuh.dashboard 
+DNS.2 = localhost 
+IP.1 = 127.0.0.1 
+IP.2 = 172.18.0.2 
