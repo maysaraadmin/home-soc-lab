@@ -1,0 +1,89 @@
+version: '3'
+
+services:
+  # Elasticsearch for Cortex
+  cortex-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.7
+    container_name: cortex-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - http.port=9200
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - cortex_es_data:/usr/share/elasticsearch/data
+    networks:
+      - thehive
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis for Cortex
+  cortex-redis:
+    image: redis:6.2-alpine
+    container_name: cortex-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - cortex_redis_data:/data
+    networks:
+      - thehive
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Cortex service
+  cortex:
+    image: thehiveproject/cortex:3.1.3
+    container_name: cortex
+    depends_on:
+      cortex-elasticsearch:
+        condition: service_healthy
+      cortex-redis:
+        condition: service_healthy
+    environment:
+      - job_directory=/tmp/cortex-jobs
+      - CORTEX_AUTH_PROVIDERS=local, apiKey, _anonymous
+      - CORTEX_AUTH_ANONYMOUS_GROUP=read-only
+      - CORTEX_ELASTICSEARCH_URI=http://cortex-elasticsearch:9200
+      - CORTEX_REDIS_URI=redis://cortex-redis:6379
+      - CORTEX_SECRET=changeme
+      - CORTEX_ANALYZERS_PATH=/opt/Cortex-Analyzers/analyzers
+      - CORTEX_RESPONDERS_PATH=/opt/Cortex-Analyzers/responders
+      - CORTEX_ANALYZERS="/opt/Cortex-Analyzers/analyzers"
+      - CORTEX_RESPONDERS="/opt/Cortex-Analyzers/responders"
+    volumes:
+      - cortex_data:/data
+      - cortex_logs:/var/log/cortex
+      - ./cortex/analyzers:/opt/Cortex-Analyzers/analyzers
+      - ./cortex/responders:/opt/Cortex-Analyzers/responders
+    ports:
+      - "9001:9001"
+    networks:
+      - thehive
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+networks:
+  thehive:
+    external: true
+    name: home-soc-lab_thehive
+
+volumes:
+  cortex_es_data:
+  cortex_redis_data:
+  cortex_data:
+  cortex_logs:

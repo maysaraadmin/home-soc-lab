@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Error 50x - Server Error</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #d32f2f;
+        }
+        .error-details {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #ffebee;
+            border-left: 4px solid #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Server Error (50x)</h1>
+        <p>We're sorry, but something went wrong on our end.</p>
+        <div class="error-details">
+            <p>Please try again later or contact support if the problem persists.</p>
+            <p>Error: <span id="error-code">500 Internal Server Error</span></p>
+            <p>Request ID: <span id="request-id">#${RANDOM}</span></p>
+        </div>
+    </div>
+</body>
+</html>

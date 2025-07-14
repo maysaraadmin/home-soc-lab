@@ -1,0 +1,203 @@
+version: '3.8'
+
+services:
+  shuffle-db:
+    image: postgres:13
+    container_name: shuffle-db
+    environment:
+      - POSTGRES_USER=shuffle
+      - POSTGRES_PASSWORD=shuffle
+      - POSTGRES_DB=shuffle
+    volumes:
+      - shuffle_db_data:/var/lib/postgresql/data
+    networks:
+      - thehive
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shuffle -d shuffle"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  shuffle-backend:
+    image: frikky/shuffle:backend-1.1.1
+    container_name: shuffle-backend
+    environment:
+      - DB_HOST=shuffle-db
+      - DB_USER=shuffle
+      - DB_PASSWORD=shuffle
+      - DB_NAME=shuffle
+      - DB_SSLMODE=disable
+      - SHUFFLE_SWARM_CONFIG=execution
+      - SHUFFLE_APP_SDK_TIMEOUT=60
+      - SHUFFLE_APP_SDK_DEPLOYMENT=local
+      - SHUFFLE_APP_SDK_DEPLOYMENT_KEY=shuffle
+      - SHUFFLE_APP_SDK_DEPLOYMENT_FRIENDLY=Local
+      - SHUFFLE_APP_ENVIRONMENT=onprem
+      - SHUFFLE_APP_ENV_NAME=Shuffle
+      - SHUFFLE_APP_SDK_HTTP_PORT=5001
+      - SHUFFLE_APP_SDK_ORGANIZATIONS=Shuffle
+      - SHUFFLE_APP_SDK_START_NODES=true
+      - SHUFFLE_APP_SDK_CLEANUP=true
+      - SHUFFLE_APP_SDK_BASE_IMAGE=frikky/shuffle:backend-1.1.1
+      - SHUFFLE_APP_SDK_BASE_IMAGE_SWARM=shuffle-backend
+      - SHUFFLE_APP_SDK_BASE_IMAGE_SWARM_WORKER=shuffle-worker
+      - SHUFFLE_APP_SDK_BASE_IMAGE_SWARM_SCHEDULER=shuffle-scheduler
+      - SHUFFLE_APP_SDK_BASE_IMAGE_SWARM_APP_SDK=shuffle-app_sdk
+      - SHUFFLE_APP_SDK_BASE_IMAGE_SWARM_APP_SDK_BASE=shuffle-app_sdk_base
+    depends_on:
+      - shuffle-db
+    ports:
+      - "5001:5001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - shuffle_data:/etc/shuffle
+    networks:
+      - thehive
+    restart: unless-stopped
+
+  shuffle-frontend:
+    image: frikky/shuffle:frontend-1.1.1
+    container_name: shuffle-frontend
+    environment:
+      - REACT_APP_API_URL=http://localhost:5001
+      - REACT_APP_WS_URL=ws://localhost:5001
+      - REACT_APP_USE_WHITELABEL=false
+      - REACT_APP_WHITELABEL_NAME=Shuffle
+      - REACT_APP_WHITELABEL_LOGO=
+      - REACT_APP_WHITELABEL_ICON=
+      - REACT_APP_WHITELABEL_ICON_WIDTH=50
+      - REACT_APP_WHITELABEL_ICON_HEIGHT=50
+      - REACT_APP_WHITELABEL_ICON_MARGIN=10
+      - REACT_APP_WHITELABEL_ICON_POSITION=left
+      - REACT_APP_WHITELABEL_ICON_ALT=Shuffle
+      - REACT_APP_WHITELABEL_ICON_TITLE=Shuffle
+      - REACT_APP_WHITELABEL_ICON_CLASS=shuffle-logo
+      - REACT_APP_WHITELABEL_ICON_STYLE=
+      - REACT_APP_WHITELABEL_ICON_LINK=
+      - REACT_APP_WHITELABEL_ICON_LINK_TARGET=_blank
+      - REACT_APP_WHITELABEL_ICON_LINK_REL=noopener noreferrer
+      - REACT_APP_WHITELABEL_ICON_LINK_TITLE=Shuffle
+      - REACT_APP_WHITELABEL_ICON_LINK_CLASS=shuffle-logo-link
+      - REACT_APP_WHITELABEL_ICON_LINK_STYLE=
+    depends_on:
+      - shuffle-backend
+    ports:
+      - "3000:80"
+      - "3443:443"
+    networks:
+      - thehive
+    restart: unless-stopped
+
+  shuffle-worker:
+    image: frikky/shuffle:worker-1.1.1
+    container_name: shuffle-worker
+    environment:
+      - SHUFFLE_SWARM_CONFIG=worker
+      - SHUFFLE_SWARM_NAME=shuffle-worker
+      - SHUFFLE_SWARM_API=http://shuffle-backend:5001
+      - SHUFFLE_SWARM_API_KEY=shuffle
+      - SHUFFLE_SWARM_WORKER_TAGS=shuffle
+      - SHUFFLE_SWARM_WORKER_TIMEOUT=60
+      - SHUFFLE_SWARM_WORKER_PLATFORM=docker
+      - SHUFFLE_SWARM_WORKER_BASE_IMAGE=frikky/shuffle:worker-1.1.1
+      - SHUFFLE_SWARM_WORKER_BASE_IMAGE_SWARM=shuffle-worker
+      - SHUFFLE_SWARM_WORKER_BASE_IMAGE_SWARM_WORKER=shuffle-worker
+      - SHUFFLE_SWARM_WORKER_BASE_IMAGE_SWARM_SCHEDULER=shuffle-scheduler
+      - SHUFFLE_SWARM_WORKER_BASE_IMAGE_SWARM_APP_SDK=shuffle-app_sdk
+      - SHUFFLE_SWARM_WORKER_BASE_IMAGE_SWARM_APP_SDK_BASE=shuffle-app_sdk_base
+    depends_on:
+      - shuffle-backend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - shuffle_worker_data:/etc/shuffle
+    networks:
+      - thehive
+    restart: unless-stopped
+
+  shuffle-scheduler:
+    image: frikky/shuffle:scheduler-1.1.1
+    container_name: shuffle-scheduler
+    environment:
+      - SHUFFLE_SWARM_CONFIG=scheduler
+      - SHUFFLE_SWARM_NAME=shuffle-scheduler
+      - SHUFFLE_SWARM_API=http://shuffle-backend:5001
+      - SHUFFLE_SWARM_API_KEY=shuffle
+      - SHUFFLE_SWARM_SCHEDULER_INTERVAL=10
+      - SHUFFLE_SWARM_SCHEDULER_TIMEOUT=60
+      - SHUFFLE_SWARM_SCHEDULER_PLATFORM=docker
+      - SHUFFLE_SWARM_SCHEDULER_BASE_IMAGE=frikky/shuffle:scheduler-1.1.1
+      - SHUFFLE_SWARM_SCHEDULER_BASE_IMAGE_SWARM=shuffle-scheduler
+      - SHUFFLE_SWARM_SCHEDULER_BASE_IMAGE_SWARM_WORKER=shuffle-worker
+      - SHUFFLE_SWARM_SCHEDULER_BASE_IMAGE_SWARM_SCHEDULER=shuffle-scheduler
+      - SHUFFLE_SWARM_SCHEDULER_BASE_IMAGE_SWARM_APP_SDK=shuffle-app_sdk
+      - SHUFFLE_SWARM_SCHEDULER_BASE_IMAGE_SWARM_APP_SDK_BASE=shuffle-app_sdk_base
+    depends_on:
+      - shuffle-backend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - shuffle_scheduler_data:/etc/shuffle
+    networks:
+      - thehive
+    restart: unless-stopped
+
+  shuffle-app_sdk:
+    image: frikky/shuffle:app_sdk-1.1.1
+    container_name: shuffle-app_sdk
+    environment:
+      - SHUFFLE_SWARM_CONFIG=app_sdk
+      - SHUFFLE_SWARM_NAME=shuffle-app_sdk
+      - SHUFFLE_SWARM_API=http://shuffle-backend:5001
+      - SHUFFLE_SWARM_API_KEY=shuffle
+      - SHUFFLE_SWARM_APP_SDK_PLATFORM=docker
+      - SHUFFLE_SWARM_APP_SDK_BASE_IMAGE=frikky/shuffle:app_sdk-1.1.1
+      - SHUFFLE_SWARM_APP_SDK_BASE_IMAGE_SWARM=shuffle-app_sdk
+      - SHUFFLE_SWARM_APP_SDK_BASE_IMAGE_SWARM_WORKER=shuffle-worker
+      - SHUFFLE_SWARM_APP_SDK_BASE_IMAGE_SWARM_SCHEDULER=shuffle-scheduler
+      - SHUFFLE_SWARM_APP_SDK_BASE_IMAGE_SWARM_APP_SDK=shuffle-app_sdk
+      - SHUFFLE_SWARM_APP_SDK_BASE_IMAGE_SWARM_APP_SDK_BASE=shuffle-app_sdk_base
+    depends_on:
+      - shuffle-backend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - shuffle_app_sdk_data:/etc/shuffle
+    networks:
+      - thehive
+    restart: unless-stopped
+
+  shuffle-app_sdk_base:
+    image: frikky/shuffle:app_sdk_base-1.1.1
+    container_name: shuffle-app_sdk_base
+    environment:
+      - SHUFFLE_SWARM_CONFIG=app_sdk_base
+      - SHUFFLE_SWARM_NAME=shuffle-app_sdk_base
+      - SHUFFLE_SWARM_API=http://shuffle-backend:5001
+      - SHUFFLE_SWARM_API_KEY=shuffle
+      - SHUFFLE_SWARM_APP_SDK_BASE_PLATFORM=docker
+      - SHUFFLE_SWARM_APP_SDK_BASE_BASE_IMAGE=frikky/shuffle:app_sdk_base-1.1.1
+      - SHUFFLE_SWARM_APP_SDK_BASE_BASE_IMAGE_SWARM=shuffle-app_sdk_base
+      - SHUFFLE_SWARM_APP_SDK_BASE_BASE_IMAGE_SWARM_WORKER=shuffle-worker
+      - SHUFFLE_SWARM_APP_SDK_BASE_BASE_IMAGE_SWARM_SCHEDULER=shuffle-scheduler
+      - SHUFFLE_SWARM_APP_SDK_BASE_BASE_IMAGE_SWARM_APP_SDK=shuffle-app_sdk
+      - SHUFFLE_SWARM_APP_SDK_BASE_BASE_IMAGE_SWARM_APP_SDK_BASE=shuffle-app_sdk_base
+    depends_on:
+      - shuffle-backend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - shuffle_app_sdk_base_data:/etc/shuffle
+    networks:
+      - thehive
+    restart: unless-stopped
+
+volumes:
+  shuffle_db_data:
+  shuffle_data:
+  shuffle_worker_data:
+  shuffle_scheduler_data:
+  shuffle_app_sdk_data:
+  shuffle_app_sdk_base_data:
+
+networks:
+  thehive:
+    external: true
+    name: home-soc-lab_thehive
