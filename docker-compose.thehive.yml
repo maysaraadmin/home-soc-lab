@@ -1,0 +1,70 @@
+version: '3'
+
+services:
+  cassandra:
+    image: cassandra:4.0
+    environment:
+      - CASSANDRA_CLUSTER_NAME=TheHive
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
+      - CASSANDRA_START_RPC=true
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    networks:
+      - thehive
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.7
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - thehive
+    restart: unless-stopped
+
+  thehive:
+    image: strangebee/thehive:5.2
+    depends_on:
+      - cassandra
+      - elasticsearch
+    environment:
+      - CASSANDRA_CLUSTER_NAME=TheHive
+      - CASSANDRA_ENDPOINTS=cassandra
+      - CASSANDRA_KEYSPACE=thehive
+      - SEARCH_ENGINE=elasticsearch
+      - ELASTICSEARCH_URI=elasticsearch:9200
+      - ELASTICSEARCH_INDEX=thehive
+      - SECRET=changeme
+      - APPLICATION_SECRET=changeme
+      - PLAY_HTTP_SECRET=changeme
+      - PLAY_CRYPTO_SECRET=changeme
+      - AUTHENTICATION_METHOD=basic
+      - AUTHENTICATION_BASIC_USERNAME=admin
+      - AUTHENTICATION_BASIC_PASSWORD=changeme
+    ports:
+      - "9000:9000"
+    volumes:
+      - thehive_data:/opt/thp/thehive/index
+      - thehive_config:/etc/thehive
+      - thehive_data2:/opt/thp/thehive/data
+    networks:
+      - thehive
+    restart: unless-stopped
+
+networks:
+  thehive:
+    driver: bridge
+
+volumes:
+  cassandra_data:
+  es_data:
+  thehive_data:
+  thehive_config:
+  thehive_data2:
