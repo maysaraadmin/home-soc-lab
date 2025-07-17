@@ -59,7 +59,7 @@ services:
     image: milvusbootcamp/faiss-webclient:2.0.0
     container_name: faiss-web
     ports:
-      - "3001:80
+      - "3001:80"
     environment:
       - API_URL=http://faiss-service:19121
     depends_on:

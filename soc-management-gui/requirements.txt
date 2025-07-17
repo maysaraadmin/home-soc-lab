@@ -1,33 +1,32 @@
 # Core Dependencies
 streamlit>=1.22.0
 pandas>=1.5.0
-plotly>=5.11.0
 numpy>=1.23.0
-python-dateutil>=2.8.2
-requests>=2.28.0
 python-dotenv>=0.21.0
-pyyaml>=6.0
+pyyaml>=6.0.0
 psutil>=5.9.0
-pyOpenSSL>=22.0.0  # For certificate handling
+requests>=2.28.0
 
-# Web Server
-Flask>=2.0.1,<3.0.0
-gunicorn>=20.1.0,<21.0.0
+# Security
+cryptography>=38.0.0
+pyjwt>=2.6.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.5
 
-# Security Tools Integration
-wazuh>=4.5.0
-thehive4py>=1.8.3,<2.0.0
-cortex4py>=2.1.0,<3.0.0
+# Utilities
+python-dateutil>=2.8.2
+pytz>=2022.7.1
+python-slugify>=7.0.0
+email-validator>=1.3.1
+
+# API Clients
+wazuh>=4.3.0
+thehive4py>=1.8.0
+cortex4py>=2.1.0
 
 # Development
-pytest>=7.0.0
+pytest>=7.2.0
 pytest-cov>=4.0.0
 black>=22.12.0
 flake8>=6.0.0
-faiss-cpu>=1.7.3,<2.0.0
-
-# Development Tools
-pytest>=7.0.0,<8.0.0
-black>=22.0.0,<23.0.0
-flake8>=4.0.0,<5.0.0
-shuffle-sdk>=1.0.0
+mypy>=1.0.0

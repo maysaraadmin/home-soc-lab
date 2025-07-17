@@ -45,9 +45,23 @@ A comprehensive web-based interface for managing and monitoring your Security Op
 
 ## Usage
 
+### Development Mode
+
 1. Start the Streamlit server:
    ```bash
    streamlit run app.py
+   ```
+
+### Production Deployment with SSL
+
+For production deployment with SSL, we provide a Docker Compose setup with Traefik as a reverse proxy and Let's Encrypt for automatic SSL certificate management.
+
+1. Follow the [SSL Setup Guide](SSL-SETUP.md) to configure SSL for your domain
+2. Start the services:
+   ```bash
+   docker-compose up -d
+   ```
+3. Access the application at `https://your-domain.com`
    ```
 
 2. Open your web browser and navigate to:

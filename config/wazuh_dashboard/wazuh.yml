@@ -1,17 +1,42 @@
+# Wazuh API Configuration
 hosts:
   - default:
-      url: "https://localhost"
+      # API connection settings
+      url: https://wazuh.manager
       port: 55000
       username: wazuh-wui
       password: "MyS3cr37P450r.*-"
+      
+      # Security settings
       run_as: false
       url_base_path: "/"
       validate: true
       skip_verify: true
-hosts:
-  - 1513629884013:
-      url: http://wazuh.manager:55000
-      port: 55000
-      username: wazuh-wui
-      password: MyS3cr37P450r.*-
-      run_as: false
+      
+      # Timeout settings
+      request_timeout: 30000
+      request_attempts: 3
+      request_max_attempts: 5
+      
+      # Cache settings
+      cache_enabled: true
+      cache_ttl: 60
+      
+      # Logging
+      log_level: info
+      log_format: json
+      
+      # Advanced settings
+      api_selector: 'v4.7.0'
+      extensions: true
+      
+      # Health check
+      health_check:
+        enabled: true
+        frequency: 30000
+        
+      # Request configuration
+      request:
+        headers:
+          'Content-Type': 'application/json'
+          'Accept': 'application/json'

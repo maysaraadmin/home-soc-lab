@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   cassandra:
@@ -16,7 +16,15 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          memory: 1G
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.7
@@ -24,25 +32,37 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-      - http.port=9201
-      - http.publish_port=9201
+      - http.port=9202
+      - http.publish_port=9202
       - transport.port=9301
+      - bootstrap.memory_lock=true
     ulimits:
       memlock:
         soft: -1
         hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
     ports:
-      - "9201:9201"
+      - "9202:9202"
     volumes:
       - es_data:/usr/share/elasticsearch/data
     networks:
       - thehive
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9201/_cluster/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9202/_cluster/health?wait_for_status=yellow"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          memory: 2G
 
   thehive:
     image: strangebee/thehive:5.2
@@ -56,7 +76,7 @@ services:
       - CASSANDRA_ENDPOINTS=cassandra
       - CASSANDRA_KEYSPACE=thehive
       - SEARCH_ENGINE=elasticsearch
-      - ELASTICSEARCH_URI=http://elasticsearch:9201
+      - ELASTICSEARCH_URI=http://elasticsearch:9202
       - ELASTICSEARCH_INDEX=thehive
       - SECRET=changeme
       - APPLICATION_SECRET=changeme
@@ -72,6 +92,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 120s
     expose:
       - "9000"
     volumes:
