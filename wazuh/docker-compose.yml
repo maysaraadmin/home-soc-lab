@@ -1,0 +1,85 @@
+
+services:
+  wazuh.manager:
+    image: wazuh/wazuh-manager:4.7.0
+    hostname: wazuh.manager
+    restart: always
+    ports:
+      - "1514:1514"
+      - "1515:1515"
+      - "1516:1516"
+      - "514:514/udp"
+      - "55000:55000"
+    environment:
+      - INDEXER_URL=http://wazuh.indexer:9200
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - API_USERNAME=wazuh
+      - API_PASSWORD=wazuh
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - wazuh_api_configuration:/var/ossec/api/configuration/auth/user
+      - wazuh_etc:/var/ossec/etc
+      - wazuh_logs:/var/ossec/logs
+      - wazuh_queue:/var/ossec/queue
+      - wazuh_var_multigroups:/var/ossec/var/multigroups
+      - wazuh_integrations:/var/ossec/integrations
+      - wazuh_active_response:/var/ossec/active-response/bin
+      - wazuh_agentless:/var/ossec/agentless
+      - wazuh_wodles:/var/ossec/wodles
+      - wazuh_custom_rules:/var/ossec/etc/rules
+      - wazuh_custom_config:/var/ossec/etc/shared/default
+
+  wazuh.indexer:
+    image: wazuh/wazuh-indexer:4.7.0
+    hostname: wazuh.indexer
+    restart: always
+    ports:
+      - "9200:9200"
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=SecretPassword"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - wazuh_indexer_data:/var/lib/wazuh-indexer
+
+  wazuh.dashboard:
+    image: wazuh/wazuh-dashboard:4.7.0
+    hostname: wazuh.dashboard
+    restart: always
+    ports:
+      - "443:5601"
+    environment:
+      - "OPENSEARCH_HOSTS=[\"http://wazuh.indexer:9200\"]"
+      - "OPENSEARCH_USERNAME=admin"
+      - "OPENSEARCH_PASSWORD=SecretPassword"
+      - "OPENSEARCH_SSL_VERIFICATIONMODE=certificate"
+    depends_on:
+      - wazuh.indexer
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - wazuh_dashboard_configuration:/usr/share/wazuh-dashboard/data/wazuh/config/
+
+volumes:
+  wazuh_api_configuration:
+  wazuh_etc:
+  wazuh_logs:
+  wazuh_queue:
+  wazuh_var_multigroups:
+  wazuh_integrations:
+  wazuh_active_response:
+  wazuh_agentless:
+  wazuh_wodles:
+  wazuh_custom_rules:
+  wazuh_custom_config:
+  wazuh_indexer_data:
+  wazuh_dashboard_configuration:

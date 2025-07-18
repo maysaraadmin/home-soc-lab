@@ -1,0 +1,902 @@
+{
+  "0": {
+    "id": 0,
+    "title": "Placeholder TTP 0",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1000",
+    "created_at": 1752431020.1512556,
+    "is_placeholder": true
+  },
+  "1": {
+    "id": 1,
+    "title": "Placeholder TTP 1",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1001",
+    "created_at": 1752431020.1512601,
+    "is_placeholder": true
+  },
+  "2": {
+    "id": 2,
+    "title": "Placeholder TTP 2",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1002",
+    "created_at": 1752431020.1512623,
+    "is_placeholder": true
+  },
+  "3": {
+    "id": 3,
+    "title": "Placeholder TTP 3",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1003",
+    "created_at": 1752431020.1512632,
+    "is_placeholder": true
+  },
+  "4": {
+    "id": 4,
+    "title": "Placeholder TTP 4",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1004",
+    "created_at": 1752431020.1512647,
+    "is_placeholder": true
+  },
+  "5": {
+    "id": 5,
+    "title": "Placeholder TTP 5",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1005",
+    "created_at": 1752431020.1512663,
+    "is_placeholder": true
+  },
+  "6": {
+    "id": 6,
+    "title": "Placeholder TTP 6",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1006",
+    "created_at": 1752431020.151268,
+    "is_placeholder": true
+  },
+  "7": {
+    "id": 7,
+    "title": "Placeholder TTP 7",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1007",
+    "created_at": 1752431020.1512692,
+    "is_placeholder": true
+  },
+  "8": {
+    "id": 8,
+    "title": "Placeholder TTP 8",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1008",
+    "created_at": 1752431020.1512704,
+    "is_placeholder": true
+  },
+  "9": {
+    "id": 9,
+    "title": "Placeholder TTP 9",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1009",
+    "created_at": 1752431020.151271,
+    "is_placeholder": true
+  },
+  "10": {
+    "id": 10,
+    "title": "Placeholder TTP 10",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1010",
+    "created_at": 1752431020.1512723,
+    "is_placeholder": true
+  },
+  "11": {
+    "id": 11,
+    "title": "Placeholder TTP 11",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1011",
+    "created_at": 1752431020.151274,
+    "is_placeholder": true
+  },
+  "12": {
+    "id": 12,
+    "title": "Placeholder TTP 12",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1012",
+    "created_at": 1752431020.1512747,
+    "is_placeholder": true
+  },
+  "13": {
+    "id": 13,
+    "title": "Placeholder TTP 13",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1013",
+    "created_at": 1752431020.1512756,
+    "is_placeholder": true
+  },
+  "14": {
+    "id": 14,
+    "title": "Placeholder TTP 14",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1014",
+    "created_at": 1752431020.1512764,
+    "is_placeholder": true
+  },
+  "15": {
+    "id": 15,
+    "title": "Placeholder TTP 15",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1015",
+    "created_at": 1752431020.1512773,
+    "is_placeholder": true
+  },
+  "16": {
+    "id": 16,
+    "title": "Placeholder TTP 16",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1016",
+    "created_at": 1752431020.151278,
+    "is_placeholder": true
+  },
+  "17": {
+    "id": 17,
+    "title": "Placeholder TTP 17",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1017",
+    "created_at": 1752431020.1512792,
+    "is_placeholder": true
+  },
+  "18": {
+    "id": 18,
+    "title": "Placeholder TTP 18",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1018",
+    "created_at": 1752431020.1512802,
+    "is_placeholder": true
+  },
+  "19": {
+    "id": 19,
+    "title": "Placeholder TTP 19",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1019",
+    "created_at": 1752431020.151281,
+    "is_placeholder": true
+  },
+  "20": {
+    "id": 20,
+    "title": "Placeholder TTP 20",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1020",
+    "created_at": 1752431020.1526952,
+    "is_placeholder": true
+  },
+  "21": {
+    "id": 21,
+    "title": "Placeholder TTP 21",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1021",
+    "created_at": 1752431020.152699,
+    "is_placeholder": true
+  },
+  "22": {
+    "id": 22,
+    "title": "Placeholder TTP 22",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1022",
+    "created_at": 1752431020.1527286,
+    "is_placeholder": true
+  },
+  "23": {
+    "id": 23,
+    "title": "Placeholder TTP 23",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1023",
+    "created_at": 1752431020.1527295,
+    "is_placeholder": true
+  },
+  "24": {
+    "id": 24,
+    "title": "Placeholder TTP 24",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1024",
+    "created_at": 1752431020.1527348,
+    "is_placeholder": true
+  },
+  "25": {
+    "id": 25,
+    "title": "Placeholder TTP 25",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1025",
+    "created_at": 1752431020.1527357,
+    "is_placeholder": true
+  },
+  "26": {
+    "id": 26,
+    "title": "Placeholder TTP 26",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1026",
+    "created_at": 1752431020.1527364,
+    "is_placeholder": true
+  },
+  "27": {
+    "id": 27,
+    "title": "Placeholder TTP 27",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1027",
+    "created_at": 1752431020.1527374,
+    "is_placeholder": true
+  },
+  "28": {
+    "id": 28,
+    "title": "Placeholder TTP 28",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1028",
+    "created_at": 1752431020.152738,
+    "is_placeholder": true
+  },
+  "29": {
+    "id": 29,
+    "title": "Placeholder TTP 29",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1029",
+    "created_at": 1752431020.1527388,
+    "is_placeholder": true
+  },
+  "30": {
+    "id": 30,
+    "title": "Placeholder TTP 30",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1030",
+    "created_at": 1752431020.1527395,
+    "is_placeholder": true
+  },
+  "31": {
+    "id": 31,
+    "title": "Placeholder TTP 31",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1031",
+    "created_at": 1752431020.1527407,
+    "is_placeholder": true
+  },
+  "32": {
+    "id": 32,
+    "title": "Placeholder TTP 32",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1032",
+    "created_at": 1752431020.1527414,
+    "is_placeholder": true
+  },
+  "33": {
+    "id": 33,
+    "title": "Placeholder TTP 33",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1033",
+    "created_at": 1752431020.1527421,
+    "is_placeholder": true
+  },
+  "34": {
+    "id": 34,
+    "title": "Placeholder TTP 34",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1034",
+    "created_at": 1752431020.1527429,
+    "is_placeholder": true
+  },
+  "35": {
+    "id": 35,
+    "title": "Placeholder TTP 35",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1035",
+    "created_at": 1752431020.1527472,
+    "is_placeholder": true
+  },
+  "36": {
+    "id": 36,
+    "title": "Placeholder TTP 36",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1036",
+    "created_at": 1752431020.1527483,
+    "is_placeholder": true
+  },
+  "37": {
+    "id": 37,
+    "title": "Placeholder TTP 37",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1037",
+    "created_at": 1752431020.1527526,
+    "is_placeholder": true
+  },
+  "38": {
+    "id": 38,
+    "title": "Placeholder TTP 38",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1038",
+    "created_at": 1752431020.1527536,
+    "is_placeholder": true
+  },
+  "39": {
+    "id": 39,
+    "title": "Placeholder TTP 39",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1039",
+    "created_at": 1752431020.1527548,
+    "is_placeholder": true
+  },
+  "40": {
+    "id": 40,
+    "title": "Placeholder TTP 40",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1040",
+    "created_at": 1752431020.1527555,
+    "is_placeholder": true
+  },
+  "41": {
+    "id": 41,
+    "title": "Placeholder TTP 41",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1041",
+    "created_at": 1752431020.1527562,
+    "is_placeholder": true
+  },
+  "42": {
+    "id": 42,
+    "title": "Placeholder TTP 42",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1042",
+    "created_at": 1752431020.152757,
+    "is_placeholder": true
+  },
+  "43": {
+    "id": 43,
+    "title": "Placeholder TTP 43",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1043",
+    "created_at": 1752431020.1527586,
+    "is_placeholder": true
+  },
+  "44": {
+    "id": 44,
+    "title": "Placeholder TTP 44",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1044",
+    "created_at": 1752431020.1527596,
+    "is_placeholder": true
+  },
+  "45": {
+    "id": 45,
+    "title": "Placeholder TTP 45",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1045",
+    "created_at": 1752431020.15276,
+    "is_placeholder": true
+  },
+  "46": {
+    "id": 46,
+    "title": "Placeholder TTP 46",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1046",
+    "created_at": 1752431020.152761,
+    "is_placeholder": true
+  },
+  "47": {
+    "id": 47,
+    "title": "Placeholder TTP 47",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1047",
+    "created_at": 1752431020.152762,
+    "is_placeholder": true
+  },
+  "48": {
+    "id": 48,
+    "title": "Placeholder TTP 48",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1048",
+    "created_at": 1752431020.1527662,
+    "is_placeholder": true
+  },
+  "49": {
+    "id": 49,
+    "title": "Placeholder TTP 49",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1049",
+    "created_at": 1752431020.152767,
+    "is_placeholder": true
+  },
+  "50": {
+    "id": 50,
+    "title": "Placeholder TTP 50",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1050",
+    "created_at": 1752431020.1527677,
+    "is_placeholder": true
+  },
+  "51": {
+    "id": 51,
+    "title": "Placeholder TTP 51",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1051",
+    "created_at": 1752431020.1527686,
+    "is_placeholder": true
+  },
+  "52": {
+    "id": 52,
+    "title": "Placeholder TTP 52",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1052",
+    "created_at": 1752431020.1527693,
+    "is_placeholder": true
+  },
+  "53": {
+    "id": 53,
+    "title": "Placeholder TTP 53",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1053",
+    "created_at": 1752431020.1527703,
+    "is_placeholder": true
+  },
+  "54": {
+    "id": 54,
+    "title": "Placeholder TTP 54",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1054",
+    "created_at": 1752431020.1527708,
+    "is_placeholder": true
+  },
+  "55": {
+    "id": 55,
+    "title": "Placeholder TTP 55",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1055",
+    "created_at": 1752431020.1527755,
+    "is_placeholder": true
+  },
+  "56": {
+    "id": 56,
+    "title": "Placeholder TTP 56",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1056",
+    "created_at": 1752431020.15278,
+    "is_placeholder": true
+  },
+  "57": {
+    "id": 57,
+    "title": "Placeholder TTP 57",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1057",
+    "created_at": 1752431020.152781,
+    "is_placeholder": true
+  },
+  "58": {
+    "id": 58,
+    "title": "Placeholder TTP 58",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1058",
+    "created_at": 1752431020.1527815,
+    "is_placeholder": true
+  },
+  "59": {
+    "id": 59,
+    "title": "Placeholder TTP 59",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1059",
+    "created_at": 1752431020.1527827,
+    "is_placeholder": true
+  },
+  "60": {
+    "id": 60,
+    "title": "Placeholder TTP 60",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1060",
+    "created_at": 1752431020.1527834,
+    "is_placeholder": true
+  },
+  "61": {
+    "id": 61,
+    "title": "Placeholder TTP 61",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1061",
+    "created_at": 1752431020.1527877,
+    "is_placeholder": true
+  },
+  "62": {
+    "id": 62,
+    "title": "Placeholder TTP 62",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1062",
+    "created_at": 1752431020.1527884,
+    "is_placeholder": true
+  },
+  "63": {
+    "id": 63,
+    "title": "Placeholder TTP 63",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1063",
+    "created_at": 1752431020.1527894,
+    "is_placeholder": true
+  },
+  "64": {
+    "id": 64,
+    "title": "Placeholder TTP 64",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1064",
+    "created_at": 1752431020.15279,
+    "is_placeholder": true
+  },
+  "65": {
+    "id": 65,
+    "title": "Placeholder TTP 65",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1065",
+    "created_at": 1752431020.1527908,
+    "is_placeholder": true
+  },
+  "66": {
+    "id": 66,
+    "title": "Placeholder TTP 66",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1066",
+    "created_at": 1752431020.1527917,
+    "is_placeholder": true
+  },
+  "67": {
+    "id": 67,
+    "title": "Placeholder TTP 67",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1067",
+    "created_at": 1752431020.1527932,
+    "is_placeholder": true
+  },
+  "68": {
+    "id": 68,
+    "title": "Placeholder TTP 68",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1068",
+    "created_at": 1752431020.1527944,
+    "is_placeholder": true
+  },
+  "69": {
+    "id": 69,
+    "title": "Placeholder TTP 69",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1069",
+    "created_at": 1752431020.1527956,
+    "is_placeholder": true
+  },
+  "70": {
+    "id": 70,
+    "title": "Placeholder TTP 70",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1070",
+    "created_at": 1752431020.1527967,
+    "is_placeholder": true
+  },
+  "71": {
+    "id": 71,
+    "title": "Placeholder TTP 71",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1071",
+    "created_at": 1752431020.1527977,
+    "is_placeholder": true
+  },
+  "72": {
+    "id": 72,
+    "title": "Placeholder TTP 72",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1072",
+    "created_at": 1752431020.1527987,
+    "is_placeholder": true
+  },
+  "73": {
+    "id": 73,
+    "title": "Placeholder TTP 73",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1073",
+    "created_at": 1752431020.1527998,
+    "is_placeholder": true
+  },
+  "74": {
+    "id": 74,
+    "title": "Placeholder TTP 74",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1074",
+    "created_at": 1752431020.152806,
+    "is_placeholder": true
+  },
+  "75": {
+    "id": 75,
+    "title": "Placeholder TTP 75",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1075",
+    "created_at": 1752431020.1528072,
+    "is_placeholder": true
+  },
+  "76": {
+    "id": 76,
+    "title": "Placeholder TTP 76",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1076",
+    "created_at": 1752431020.1528082,
+    "is_placeholder": true
+  },
+  "77": {
+    "id": 77,
+    "title": "Placeholder TTP 77",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1077",
+    "created_at": 1752431020.1528091,
+    "is_placeholder": true
+  },
+  "78": {
+    "id": 78,
+    "title": "Placeholder TTP 78",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1078",
+    "created_at": 1752431020.1528103,
+    "is_placeholder": true
+  },
+  "79": {
+    "id": 79,
+    "title": "Placeholder TTP 79",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1079",
+    "created_at": 1752431020.1528115,
+    "is_placeholder": true
+  },
+  "80": {
+    "id": 80,
+    "title": "Placeholder TTP 80",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1080",
+    "created_at": 1752431020.1528125,
+    "is_placeholder": true
+  },
+  "81": {
+    "id": 81,
+    "title": "Placeholder TTP 81",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1081",
+    "created_at": 1752431020.152814,
+    "is_placeholder": true
+  },
+  "82": {
+    "id": 82,
+    "title": "Placeholder TTP 82",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1082",
+    "created_at": 1752431020.1528149,
+    "is_placeholder": true
+  },
+  "83": {
+    "id": 83,
+    "title": "Placeholder TTP 83",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1083",
+    "created_at": 1752431020.1528158,
+    "is_placeholder": true
+  },
+  "84": {
+    "id": 84,
+    "title": "Placeholder TTP 84",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1084",
+    "created_at": 1752431020.152817,
+    "is_placeholder": true
+  },
+  "85": {
+    "id": 85,
+    "title": "Placeholder TTP 85",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1085",
+    "created_at": 1752431020.1528182,
+    "is_placeholder": true
+  },
+  "86": {
+    "id": 86,
+    "title": "Placeholder TTP 86",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1086",
+    "created_at": 1752431020.1528213,
+    "is_placeholder": true
+  },
+  "87": {
+    "id": 87,
+    "title": "Placeholder TTP 87",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1087",
+    "created_at": 1752431020.1528344,
+    "is_placeholder": true
+  },
+  "88": {
+    "id": 88,
+    "title": "Placeholder TTP 88",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1088",
+    "created_at": 1752431020.1528356,
+    "is_placeholder": true
+  },
+  "89": {
+    "id": 89,
+    "title": "Placeholder TTP 89",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1089",
+    "created_at": 1752431020.1528366,
+    "is_placeholder": true
+  },
+  "90": {
+    "id": 90,
+    "title": "Placeholder TTP 90",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1090",
+    "created_at": 1752431020.1528373,
+    "is_placeholder": true
+  },
+  "91": {
+    "id": 91,
+    "title": "Placeholder TTP 91",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1091",
+    "created_at": 1752431020.1528385,
+    "is_placeholder": true
+  },
+  "92": {
+    "id": 92,
+    "title": "Placeholder TTP 92",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1092",
+    "created_at": 1752431020.1528394,
+    "is_placeholder": true
+  },
+  "93": {
+    "id": 93,
+    "title": "Placeholder TTP 93",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1093",
+    "created_at": 1752431020.1528404,
+    "is_placeholder": true
+  },
+  "94": {
+    "id": 94,
+    "title": "Placeholder TTP 94",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1094",
+    "created_at": 1752431020.1528416,
+    "is_placeholder": true
+  },
+  "95": {
+    "id": 95,
+    "title": "Placeholder TTP 95",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1095",
+    "created_at": 1752431020.1528425,
+    "is_placeholder": true
+  },
+  "96": {
+    "id": 96,
+    "title": "Placeholder TTP 96",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1096",
+    "created_at": 1752431020.1528437,
+    "is_placeholder": true
+  },
+  "97": {
+    "id": 97,
+    "title": "Placeholder TTP 97",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1097",
+    "created_at": 1752431020.1528451,
+    "is_placeholder": true
+  },
+  "98": {
+    "id": 98,
+    "title": "Placeholder TTP 98",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1098",
+    "created_at": 1752431020.152849,
+    "is_placeholder": true
+  },
+  "99": {
+    "id": 99,
+    "title": "Placeholder TTP 99",
+    "description": "This is a placeholder entry. Train the model with real data.",
+    "mitre_tactic": "placeholder",
+    "mitre_technique_id": "T1099",
+    "created_at": 1752431020.15285,
+    "is_placeholder": true
+  }
+}

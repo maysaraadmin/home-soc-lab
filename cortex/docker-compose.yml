@@ -1,0 +1,118 @@
+version: '3'
+
+services:
+  # Elasticsearch for Cortex
+  cortex-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.7
+    container_name: cortex-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - http.port=9201
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - cortex_es_data:/usr/share/elasticsearch/data
+    ports:
+      - "9201:9201"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9201/_cluster/health?wait_for_status=yellow"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  # Redis for Cortex
+  cortex-redis:
+    image: redis:6.2-alpine
+    container_name: cortex-redis
+    command: redis-server --port 6380 --requirepass ""
+    ports:
+      - "6380:6380"
+    volumes:
+      - cortex_redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6380", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # Cortex service
+  cortex:
+    image: thehiveproject/cortex:3.1.3
+    container_name: cortex
+    ports:
+      - "9001:9001"
+    environment:
+      - job_directory=/tmp/cortex-jobs
+      - CORTEX_AUTH_PROVIDERS=local,apiKey,_anonymous
+      - CORTEX_AUTH_ANONYMOUS_GROUP=read-only
+      - CORTEX_ELASTICSEARCH_URI=http://cortex-elasticsearch:9200
+      - CORTEX_REDIS_URI=redis://cortex-redis:6379
+      - CORTEX_SECRET=changeme
+      - CORTEX_ANALYZERS_PATH=/opt/Cortex-Analyzers/analyzers
+      - CORTEX_RESPONDERS_PATH=/opt/Cortex-Analyzers/responders
+      - CORTEX_ANALYZERS=/opt/Cortex-Analyzers/analyzers
+      - CORTEX_RESPONDERS=/opt/Cortex-Analyzers/responders
+      - CORTEX_ES_HOSTS=http://cortex-elasticsearch:9200
+      - CORTEX_ES_INDEX=cortex
+      - CORTEX_ES_CLIENT_TIMEOUT=30s
+      - CORTEX_ES_RETRY=3
+      - CORTEX_ES_RETRY_INTERVAL=5s
+    volumes:
+      - cortex_data:/data
+      - cortex_logs:/var/log/cortex
+      - ./cortex/analyzers:/opt/Cortex-Analyzers/analyzers
+      - ./cortex/responders:/opt/Cortex-Analyzers/responders
+      - ./cortex/application.conf:/etc/cortex/application.conf
+    restart: unless-stopped
+    stop_grace_period: 60s
+    stop_signal: SIGTERM
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          memory: 2G
+    depends_on:
+      cortex-elasticsearch:
+        condition: service_healthy
+      cortex-redis:
+        condition: service_healthy
+
+volumes:
+  cortex_es_data:
+  cortex_redis_data:
+  cortex_data:
+  cortex_logs:
