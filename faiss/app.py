@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Request, HTTPException, status, Depends, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import faiss
 import numpy as np
 import os
@@ -9,9 +11,10 @@ import time
 import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, conlist
 from functools import lru_cache
 import hashlib
+import json_logging
 
 # Configure logging
 logging.basicConfig(
@@ -36,13 +39,19 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Add CORS middleware
+# Configure security middleware
+app.add_middleware(HTTPSRedirectMiddleware)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "yourdomain.com"])
+
+# Add CORS middleware with proper restrictions
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:8501", "https://yourdomain.com"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
+    expose_headers=["Content-Length"],
+    max_age=600,
 )
 
 # Global state
@@ -58,12 +67,28 @@ class FAISSState:
 state = FAISSState()
 
 class SearchRequest(BaseModel):
-    vector: List[float] = Field(..., description="The query vector for similarity search")
-    k: int = Field(5, ge=1, le=100, description="Number of similar vectors to return")
-    min_score: Optional[float] = Field(None, ge=0, le=1, description="Minimum similarity score (0-1)")
+    vector: conlist(float, min_items=1, max_items=1024) = Field(
+        ...,
+        description="The query vector for similarity search. Must match VECTOR_DIMENSION",
+        example=[0.1, 0.2, 0.3]  # Example with 3 elements, actual should match VECTOR_DIMENSION
+    )
+    k: int = Field(
+        5,
+        ge=1,
+        le=100,
+        description="Number of similar vectors to return (1-100)"
+    )
+    min_score: Optional[float] = Field(
+        None,
+        ge=0,
+        le=1,
+        description="Minimum similarity score (0-1)"
+    )
     
     @validator('vector')
-    def validate_vector_dimension(cls, v):
+    def validate_vector_values(cls, v):
+        if not all(isinstance(x, (int, float)) for x in v):
+            raise ValueError("All vector elements must be numbers")
         if len(v) != VECTOR_DIMENSION:
             raise ValueError(f"Vector dimension must be {VECTOR_DIMENSION}, got {len(v)}")
         return v
@@ -126,7 +151,12 @@ def create_placeholder_index() -> Tuple[faiss.Index, Dict[int, Dict[str, Any]]]:
     return index, metadata
 
 def initialize_index() -> None:
-    """Initialize the FAISS index, loading from disk if available or creating a placeholder."""
+    """
+    Initialize the FAISS index, loading from disk if available or creating a placeholder.
+    
+    Raises:
+        RuntimeError: If there's an error initializing the index
+    """
     global state
     
     if state.lock:
@@ -139,23 +169,62 @@ def initialize_index() -> None:
         # Try to load existing index
         if os.path.exists(INDEX_FILE):
             logger.info(f"Loading existing index from {INDEX_FILE}")
-            state.index = faiss.read_index(INDEX_FILE)
-            state.metadata = load_metadata()
-            state.dimension = state.index.d
-            state.initialized = True
-            state.last_updated = time.time()
-            logger.info(f"Loaded index with {state.index.ntotal} vectors")
+            try:
+                state.index = faiss.read_index(INDEX_FILE)
+                state.metadata = load_metadata()
+                state.dimension = state.index.d
+                
+                # Validate metadata consistency
+                if len(state.metadata) != state.index.ntotal:
+                    logger.warning(
+                        f"Metadata count ({len(state.metadata)}) doesn't match "
+                        f"index size ({state.index.ntotal}). Rebuilding metadata."
+                    )
+                    state.metadata = {}
+                
+                state.initialized = True
+                state.last_updated = time.time()
+                logger.info(f"Successfully loaded index with {state.index.ntotal} vectors")
+                
+            except faiss.FaissException as e:
+                logger.error(f"FAISS error loading index: {str(e)}")
+                logger.info("Attempting to create a new index due to loading error")
+                _create_new_index()
+                
         else:
             logger.warning("No existing index found, creating placeholder")
-            state.index, state.metadata = create_placeholder_index()
-            state.dimension = VECTOR_DIMENSION
-            state.initialized = True
-            state.last_updated = time.time()
+            _create_new_index()
             
-            # Save the placeholder index and metadata
-            faiss.write_index(state.index, INDEX_FILE)
-            save_metadata(state.metadata)
-            logger.info(f"Created placeholder index with {state.index.ntotal} vectors")
+    except Exception as e:
+        error_msg = f"Failed to initialize FAISS index: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        state.initialized = False
+        raise RuntimeError(error_msg) from e
+        
+    finally:
+        state.lock = False
+
+def _create_new_index() -> None:
+    """Helper function to create a new FAISS index and metadata."""
+    try:
+        state.index, state.metadata = create_placeholder_index()
+        state.dimension = VECTOR_DIMENSION
+        
+        # Ensure the directory exists before writing
+        os.makedirs(os.path.dirname(INDEX_FILE), exist_ok=True)
+        
+        # Save the new index and metadata
+        faiss.write_index(state.index, INDEX_FILE)
+        save_metadata(state.metadata)
+        
+        state.initialized = True
+        state.last_updated = time.time()
+        logger.info(f"Successfully created new index with {state.index.ntotal} vectors")
+        
+    except Exception as e:
+        error_msg = f"Failed to create new FAISS index: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        raise RuntimeError(error_msg) from e
             
     except Exception as e:
         logger.error(f"Error initializing FAISS index: {str(e)}", exc_info=True)
@@ -167,8 +236,39 @@ def initialize_index() -> None:
     finally:
         state.lock = False
 
+# Configure structured logging
+json_logging.init_console()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    request_id = hashlib.md5(f"{time.time()}".encode()).hexdigest()
+    logger.info(f"Request {request_id} - {request.method} {request.url}")
+    
+    start_time = time.time()
+    try:
+        response = await call_next(request)
+        process_time = (time.time() - start_time) * 1000
+        logger.info(
+            f"Request {request_id} completed - "
+            f"Status: {response.status_code}, "
+            f"Time: {process_time:.2f}ms"
+        )
+        return response
+    except Exception as e:
+        logger.error(f"Request {request_id} failed: {str(e)}", exc_info=True)
+        raise
+
 # Initialize the index when the application starts
-initialize_index()
+try:
+    logger.info("Initializing FAISS service...")
+    initialize_index()
+    logger.info("FAISS service initialized successfully")
+except Exception as e:
+    logger.critical(f"Failed to initialize FAISS service: {str(e)}", exc_info=True)
+    raise SystemExit(1)
 
 # API endpoints
 @app.get("/status", status_code=status.HTTP_200_OK)
