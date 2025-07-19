@@ -1,0 +1,31 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Configuration files
+config/*
+
+# Logs
+logs/
+*.log
+
+# SSL certificates
+*.pem
+*.crt
+*.key
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+node_modules/
+build/
+dist/

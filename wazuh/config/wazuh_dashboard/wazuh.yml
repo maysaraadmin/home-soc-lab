@@ -1,0 +1,135 @@
+# Wazuh App Configuration for OpenSearch Dashboards
+
+# General settings
+wazuh:
+  # API connection settings
+  api:
+    protocol: http
+    host: wazuh.manager
+    port: 55000
+    username: '${WAZUH_API_USERNAME}'
+    password: '${WAZUH_API_PASSWORD}'
+    timeout: 20000  # 20 seconds
+
+  # App settings
+  app:
+    # Logging configuration
+    logging:
+      level: info
+      console: true
+      file: true
+      path: /usr/share/wazuh-dashboard/logs/wazuh-app.log
+
+    # Security settings
+    security:
+      # Enable/disable authentication
+      basicAuth: true
+      
+      # JWT settings
+      jwtSecret: 'wazuh-dashboard-jwt-secret-change-me'
+      
+      # Password policy
+      passwordPolicy:
+        minLength: 8
+        requireLowercase: true
+        requireUppercase: true
+        requireNumber: true
+        requireSpecial: true
+
+    # Cache settings
+    cache:
+      enabled: true
+      ttl: 300  # 5 minutes
+      
+    # Rate limiting
+    rateLimit:
+      enabled: true
+      max: 100  # requests per window
+      windowMs: 900000  # 15 minutes
+
+# Server settings
+server:
+  # Host and port to bind to
+  host: '0.0.0.0'
+  port: 5601
+  
+  # Maximum payload size
+  maxPayloadBytes: 1048576  # 1MB
+
+# Logging configuration
+logging:
+  # Log level (error, warn, info, debug, trace)
+  level: info
+  
+  # Log format (json, text)
+  format: json
+  
+  # Output destination (stdout, file)
+  dest: stdout
+  
+  # Log file path (if dest is file)
+  file: /usr/share/wazuh-dashboard/logs/wazuh-dashboard.log
+
+# Monitoring settings
+monitoring:
+  # Enable/disable monitoring
+  enabled: true
+  
+  # Collection interval in seconds
+  collection_interval: 900  # 15 minutes
+  
+  # Retention period in days
+  retention: 7
+
+# Security settings
+security:
+  # Enable/disable security
+  enabled: true
+  
+  # Session settings
+  session:
+    secret: 'wazuh-dashboard-session-secret-change-me'
+    ttl: 86400  # 24 hours
+    
+  # SSL/TLS settings
+  ssl:
+    enabled: false
+    key: /etc/wazuh-dashboard/certs/key.pem
+    certificate: /etc/wazuh-dashboard/certs/cert.pem
+    certificateAuthorities: /etc/wazuh-dashboard/certs/ca.pem
+
+# Performance settings
+performance:
+  # Maximum number of concurrent connections
+  maxConcurrentConnections: 100
+  
+  # Maximum number of concurrent requests per connection
+  maxConcurrentRequestsPerConnection: 5
+  
+  # Keep-alive timeout in milliseconds
+  keepAliveTimeout: 300000  # 5 minutes
+
+# Cluster settings (for future use)
+cluster:
+  enabled: false
+  name: wazuh-dashboard-cluster
+  
+  # Discovery settings
+  discovery:
+    type: 'single-node'  # or 'zen' for multi-node
+    ping_interval: '3s'
+    ping_timeout: '30s'
+    
+  # Transport settings
+  transport:
+    type: 'tcp'
+    tcp:
+      port: 9300
+      bind_host: '0.0.0.0'
+hosts:
+  - 1513629884013:
+      url: https://wazuh.manager
+      port: 55000
+      username: wazuh-wui
+      password: MyS3cr37P450r.*-
+      run_as: false

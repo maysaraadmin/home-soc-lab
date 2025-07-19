@@ -1,0 +1,32 @@
+# Wazuh Dashboard Configuration
+server.host: '0.0.0.0'
+server.port: 5601
+server.name: 'wazuh-dashboard'
+
+# Server SSL Configuration
+server.ssl.enabled: true
+server.ssl.certificate: '/usr/share/wazuh-dashboard/certs/wazuh.dashboard.pem'
+server.ssl.key: '/usr/share/wazuh-dashboard/certs/wazuh.dashboard-key.pem'
+server.ssl.certificateAuthorities: ['/usr/share/wazuh-dashboard/certs/root-ca.pem']
+
+# OpenSearch Configuration
+opensearch.hosts: ['https://wazuh.indexer:9200']
+opensearch.ssl.verificationMode: none
+opensearch.username: '${DASHBOARD_USERNAME}'
+opensearch.password: '${DASHBOARD_PASSWORD}'
+opensearch.ssl.certificateAuthorities: ['/usr/share/wazuh-dashboard/certs/root-ca.pem']
+# Disable client certificate authentication
+opensearch.ssl.certificate: ''
+opensearch.ssl.key: ''
+opensearch.requestHeadersWhitelist: [authorization, securitytenant]
+
+# Security Configuration
+opensearch_security.multitenancy.enabled: true
+opensearch_security.readonly_mode.roles: ['readall']
+
+# Performance settings
+opensearch.requestTimeout: 30000
+opensearch.shardTimeout: 0
+opensearch.logQueries: false
+
+# Wazuh app settings - These will be configured through the Wazuh app UI after initial setup

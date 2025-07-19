@@ -1,0 +1,36 @@
+nodes:
+  - name: wazuh.indexer
+    ip:
+      - 127.0.0.1
+    server:
+      - "wazuh.indexer"
+  - name: wazuh.manager
+    ip:
+      - 127.0.0.1
+    server:
+      - "wazuh.manager"
+  - name: wazuh.dashboard
+    ip:
+      - 127.0.0.1
+    server:
+      - "wazuh.dashboard"
+
+# Wazuh indexer nodes SSL configuration
+indexer:
+  name: "wazuh.indexer"
+  ip: ["127.0.0.1"]
+  server:
+    - "wazuh.indexer"
+
+# Wazuh server nodes SSL configuration
+server:
+  name: "wazuh.manager"
+  ip: ["127.0.0.1"]
+  node_name: "wazuh-manager"
+
+# Wazuh dashboard nodes SSL configuration
+dashboard:
+  name: "wazuh.dashboard"
+  ip: ["127.0.0.1"]
+  server:
+    - "wazuh.dashboard"

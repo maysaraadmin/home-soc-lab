@@ -1,0 +1,39 @@
+# Internal users configuration for Wazuh indexer
+# This file is managed by Wazuh
+# Do not modify manually unless you know what you're doing
+
+_meta:
+  type: "internalusers"
+  config_version: 2
+
+# Define admin user
+admin:
+  hash: "$2y$12$VcCDgh2NDk07JGN0jGbK..."  # Replace with your hashed password
+  reserved: true
+  backend_roles:
+  - "admin"
+  description: "Admin user"
+
+# Define kibanaserver user (used by Wazuh dashboard)
+kibanaserver:
+  hash: "$2y$12$VcCDgh2NDk07JGN0jGbK..."  # Replace with your hashed password
+  reserved: true
+  backend_roles:
+  - "kibanauser"
+  description: "Kibana server user"
+
+# Define wazuh user (used by Wazuh manager)
+wazuh:
+  hash: "$2y$12$VcCDgh2NDk07JGN0jGbK..."  # Replace with your hashed password
+  reserved: false
+  backend_roles:
+  - "wazuh"
+  description: "Wazuh user"
+
+# Define wazuh-wui user (used by Wazuh dashboard UI)
+wazuh-wui:
+  hash: "$2y$12$VcCDgh2NDk07JGN0jGbK..."  # Replace with your hashed password
+  reserved: false
+  backend_roles:
+  - "wazuh-wui"
+  description: "Wazuh Web UI user"

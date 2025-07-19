@@ -1,0 +1,48 @@
+# OpenSearch configuration for Wazuh indexer
+cluster.name: wazuh-cluster
+node.name: wazuh.indexer
+path.data: /usr/share/opensearch/data
+path.logs: /usr/share/opensearch/logs
+network.host: 0.0.0.0
+discovery.type: single-node
+plugins.security.ssl.http.enabled: false
+
+# Performance settings
+bootstrap.memory_lock: true
+indices.memory.index_buffer_size: 10%
+indices.breaker.total.limit: 60%
+indices.breaker.fielddata.limit: 40%
+indices.breaker.request.limit: 40%
+indices.breaker.total.use_real_memory: false
+
+# Thread pools
+thread_pool:
+  write:
+    size: 8
+    queue_size: 10000
+  search:
+    size: 8
+    queue_size: 1000
+
+# JVM settings
+opensearch_jvm_options:
+  -Xms1g
+  -Xmx1g
+  -XX:+UseG1GC
+  -XX:G1ReservePercent=25
+  -XX:InitiatingHeapOccupancyPercent=30
+
+# Security settings (basic)
+plugins.security.allow_unsafe_democertificates: true
+plugins.security.allow_default_init_securityindex: true
+plugins.security.authcz.admin_dn:
+  - CN=admin
+
+# Performance tuning for Wazuh
+opendistro.performanceanalyzer.metrics.collection.interval: 5000
+opendistro.performanceanalyzer.rca.framework.metrics.limits.aggregate_metrics.limits.total_java.heap.size: 1
+opendistro.performanceanalyzer.rca.framework.metrics.limits.aggregate_metrics.limits.old_gen.heap.usage: 0.65
+
+# Disable security demo banner
+plugins.security.nodes_dn:
+  - 'CN=wazuh.indexer'
