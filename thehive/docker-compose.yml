@@ -7,22 +7,85 @@ services:
     restart: unless-stopped
     hostname: cassandra
     environment:
-      - MAX_HEAP_SIZE=1G
+      - MAX_HEAP_SIZE=2G
       - HEAP_NEWSIZE=1G
       - CASSANDRA_CLUSTER_NAME=thp
     volumes:
-      - ./vol/cassandra-data:/var/lib/cassandra/data
+      - cassandra_data:/var/lib/cassandra
+    ulimits:
+      memlock: -1
+    mem_limit: 4G
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    mem_limit: 4G
 
   thehive:
-    image: 'thehiveproject/thehive4:latest'
+    image: thehiveproject/thehive4:latest
     container_name: thehive
     restart: unless-stopped
     depends_on:
       - cassandra
+      - elasticsearch
     ports:
-      - '0.0.0.0:9000:9000'
+      - "9000:9000"
+    environment:
+      - JOB_DATABASE=cassandra
+      - STORAGE_PROVIDER=cassandra
+      - CASSANDRA_SEED_HOSTS=cassandra
+      - CASSANDRA_KEYSPACE=thehive
+      - ELASTICSEARCH_URI=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=thehive
+      - CORTEX_URL=http://cortex:9001
+      - CORTEX_KEY=your-cortex-api-key-here
+      - MISP_URL=http://misp
+      - MISP_KEY=your-misp-api-key-here
     volumes:
       - ./thehive/application.conf:/etc/thehive/application.conf
-      - ./vol/data:/opt/data
-      - ./vol/index:/opt/index
-    command: '--no-config --no-config-secret'
+      - thehive_data:/etc/thehive
+      - thehive_logs:/var/log/thehive
+      - thehive_files:/opt/thp/thehive/files
+    mem_limit: 4G
+
+  cortex:
+    image: thehiveproject/cortex:latest
+    container_name: cortex
+    restart: unless-stopped
+    depends_on:
+      - elasticsearch
+    ports:
+      - "9001:9001"
+    environment:
+      - JOB_DIRECTORY=/opt/cortex/jobs
+      - CORTEX_SECRET=your-secret-here
+      - CORTEX_AUTH_PROVIDERS=local,apiKey
+      - CORTEX_ELASTICSEARCH=http://elasticsearch:9200
+      - CORTEX_ELASTICSEARCH_INDEX=cortex
+    volumes:
+      - ./cortex/application.conf:/etc/cortex/application.conf
+      - cortex_data:/etc/cortex
+      - cortex_logs:/var/log/cortex
+    mem_limit: 4G
+
+volumes:
+  cassandra_data:
+  es_data:
+  thehive_data:
+  thehive_logs:
+  thehive_files:
+  cortex_data:
+  cortex_logs:

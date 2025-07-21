@@ -1,0 +1,74 @@
+# Exclude temporary files
+/tmp/*
+/temp/*
+
+# Exclude cache directories
+**/cache/**
+**/tmp/**
+**/temp/**
+
+# Exclude version control directories
+**/.git/**
+**/.svn/**
+**/.hg/**
+
+# Exclude log files
+**/*.log
+**/*.log.*
+**/logs/**
+
+# Exclude database transaction logs
+**/wal/**
+**/xlog/**
+**/pg_wal/**
+
+# Exclude Elasticsearch and database index files
+**/data/nodes/**
+**/index/**
+
+# Exclude Docker build cache
+**/docker/buildx/**
+
+# Exclude large binary files
+**/*.iso
+**/*.qcow2
+**/*.vmdk
+**/*.vdi
+**/*.vhd
+**/*.vhdx
+
+# Exclude core dumps and crash reports
+**/core.*
+**/core
+**/*.core
+**/*.dmp
+**/crash-reports/**
+
+# Exclude backup files created by other tools
+**/*.bak
+**/*.backup
+**/backup*/**
+**/backup*
+**/*.old
+**/*.swp
+**/*.swo
+**/*.swn
+**/*.swo
+**/.DS_Store
+**/Thumbs.db
+**/desktop.ini
+
+# Exclude node_modules and other package directories
+**/node_modules/**
+**/bower_components/**
+**/vendor/**
+**/venv/**
+**/env/**
+**/.venv/**
+**/__pycache__/**
+**/*.py[cod]
+
+# Exclude IDE specific files
+**/.idea/**
+**/.vscode/**
+**/*.sublime-*

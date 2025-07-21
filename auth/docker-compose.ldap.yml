@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: openldap
+    restart: unless-stopped
+    environment:
+      - LDAP_ORGANISATION="SOC Team"
+      - LDAP_DOMAIN=soc.local
+      - LDAP_ADMIN_PASSWORD=ChangeThisAdminPassword123!
+      - LDAP_CONFIG_PASSWORD=ChangeThisConfigPassword123!
+      - LDAP_READONLY_USER=true
+      - LDAP_READONLY_USER_USERNAME=readonly
+      - LDAP_READONLY_USER_PASSWORD=ChangeThisReadonlyPassword123!
+      - LDAP_RFC2307BIS_SCHEMA=true
+      - LDAP_BACKEND=mdb
+      - LDAP_TLS=false  # Enable in production with proper certs
+    volumes:
+      - ./ldap/data:/var/lib/ldap
+      - ./ldap/conf:/etc/ldap/slapd.d
+      - ./ldap/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
+    networks:
+      - soc_internal
+    ports:
+      - "389:389"
+      - "636:636"
+    healthcheck:
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost:389", "-b", "dc=soc,dc=local", "-D", "cn=admin,dc=soc,dc=local", "-w", "ChangeThisAdminPassword123!"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  phpldapadmin:
+    image: osixia/phpldapadmin:0.9.0
+    container_name: phpldapadmin
+    restart: unless-stopped
+    environment:
+      - PHPLDAPADMIN_LDAP_HOSTS=openldap
+      - PHPLDAPADMIN_HTTPS=false  # Enable in production with proper certs
+    depends_on:
+      - openldap
+    networks:
+      - soc_internal
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  soc_internal:
+    external: true

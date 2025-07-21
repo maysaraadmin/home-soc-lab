@@ -1,0 +1,39 @@
+version: '3.8'
+
+networks:
+  # Main SOC network for management and communication between components
+  soc_network:
+    name: soc_network
+    driver: bridge
+    attachable: true
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+
+  # External-facing network for services that need internet access
+  soc_external:
+    name: soc_external
+    driver: bridge
+    attachable: true
+    enable_ipv6: false
+
+  # Internal network for sensitive services (no direct internet access)
+  soc_internal:
+    name: soc_internal
+    driver: bridge
+    internal: true  # No internet access
+    attachable: true
+
+  # Monitoring network for metrics collection
+  soc_monitoring:
+    name: soc_monitoring
+    driver: bridge
+    attachable: true
+
+  # Storage network for database and persistent storage traffic
+  soc_storage:
+    name: soc_storage
+    driver: bridge
+    internal: true  # No internet access
+    attachable: true

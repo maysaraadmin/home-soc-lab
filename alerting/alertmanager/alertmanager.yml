@@ -1,0 +1,145 @@
+global:
+  # The root route on which each incoming alert enters.
+  resolve_timeout: 5m
+  http_config:
+    follow_redirects: true
+
+  # Default SMTP configuration
+  smtp_smarthost: 'smtp.example.com:587'
+  smtp_from: 'alerts@example.com'
+  smtp_auth_username: 'alertmanager'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+  smtp_require_tls: true
+
+  # Slack API URL
+  slack_api_url: '${SLACK_API_URL}'
+
+# Custom templates for notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# The root route on which each incoming alert enters.
+route:
+  # Default receiver for alerts
+  receiver: 'soc-team-email'
+  
+  # Group alerts by alertname and service
+  group_by: ['alertname', 'service', 'severity']
+  
+  # Send a notification when an alert is firing, then wait for 'group_wait' to 
+  # send a batch of new alerts that started firing for the same group.
+  group_wait: 30s
+  
+  # When the first notification was sent, wait 'group_interval' to send a batch
+  # of new alerts that started firing for that group.
+  group_interval: 5m
+  
+  # If an alert has successfully been sent, wait 'repeat_interval' to resend them.
+  repeat_interval: 4h
+  
+  # Default group by all
+  group_by: ['...']
+  
+  # Child routes for different severity levels
+  routes:
+    # High severity alerts go to the on-call team via PagerDuty
+    - receiver: 'oncall-pagerduty'
+      match:
+        severity: 'critical'
+      continue: false
+    
+    # Security alerts go to the security team
+    - receiver: 'security-team'
+      match:
+        alert_type: 'security'
+      continue: false
+    
+    # Database alerts
+    - receiver: 'database-team'
+      match:
+        service: ['postgres', 'mysql', 'mongodb', 'redis']
+      continue: false
+    
+    # Infrastructure alerts
+    - receiver: 'infra-team'
+      match:
+        service: ['node', 'docker', 'kubernetes', 'haproxy', 'consul']
+      continue: false
+    
+    # Application alerts
+    - receiver: 'app-team'
+      match:
+        service: ['wazuh', 'thehive', 'cortex', 'misp', 'elasticsearch', 'kibana', 'grafana']
+      continue: false
+
+# Inhibition rules
+inhibit_rules:
+  # Inhibit critical alerts if there are higher priority alerts firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']
+  
+  # Inhibit all alerts if the instance is down
+  - source_match:
+      alertname: 'InstanceDown'
+    target_match_re:
+      severity: '.+'
+    equal: ['instance']
+
+# Receivers for different alert types
+receivers:
+  # Default receiver for SOC team
+  - name: 'soc-team-email'
+    email_configs:
+      - to: 'soc-team@example.com'
+        send_resolved: true
+        headers:
+          subject: '{{ template "email.default.subject" . }}'
+          from: 'SOC Alerts <alerts@example.com>'
+        html: '{{ template "email.default.html" . }}'
+  
+  # On-call team via PagerDuty
+  - name: 'oncall-pagerduty'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        description: '{{ .CommonAnnotations.summary }}'
+        details:
+          firing: '{{ .Alerts.Firing | len }}'
+          resolved: '{{ .Alerts.Resolved | len }}'
+          num_firing: '{{ .Alerts.Firing | len }}'
+          num_resolved: '{{ .Alerts.Resolved | len }}'
+  
+  # Security team notifications
+  - name: 'security-team'
+    webhook_configs:
+      - url: 'http://alertmanager-webhook-receiver:5001/alerts'
+        send_resolved: true
+  
+  # Database team notifications
+  - name: 'database-team'
+    email_configs:
+      - to: 'dba-team@example.com'
+        send_resolved: true
+  
+  # Infrastructure team notifications
+  - name: 'infra-team'
+    slack_configs:
+      - channel: '#infra-alerts'
+        send_resolved: true
+        title: '{{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        title_link: '{{ template "slack.titlelink" . }}'
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+  
+  # Application team notifications
+  - name: 'app-team'
+    webhook_configs:
+      - url: 'http://alertmanager-webhook-receiver:5001/alerts'
+        send_resolved: true
+  
+  # Catch-all receiver for any alerts that don't match other routes
+  - name: 'default-receiver'
+    webhook_configs:
+      - url: 'http://alertmanager-webhook-receiver:5001/alerts'

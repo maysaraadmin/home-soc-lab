@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  suricata:
+    image: jasonish/suricata:latest
+    container_name: suricata
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+    network_mode: host  # Required for network monitoring
+    volumes:
+      - ./conf/suricata.yaml:/etc/suricata/suricata.yaml
+      - ./rules:/var/lib/suricata/rules
+      - ./logs:/var/log/suricata
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - INTERFACE=eth0  # Adjust based on your network interface
+      - SURICATA_OPTIONS="--af-packet=eth0"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  suricata-update:
+    image: jasonish/suricata:latest
+    container_name: suricata-update
+    command: sh -c "suricata-update update-sources && suricata-update --no-test --no-reload"
+    volumes:
+      - ./rules:/var/lib/suricata/rules
+    depends_on:
+      - suricata
+    restart: on-failure
+
+  filebeat-suricata:
+    image: docker.elastic.co/beats/filebeat:8.8.2
+    container_name: filebeat-suricata
+    user: root
+    restart: unless-stopped
+    depends_on:
+      - suricata
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs:/var/log/suricata
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - ELASTICSEARCH_HOSTS=http://wazuh.indexer:9200
+      - ELASTICSEARCH_USERNAME=admin
+      - ELASTICSEARCH_PASSWORD=SecretPassword
+      - SETUP_ILM=true
+
+volumes:
+  suricata_rules:
+  suricata_logs:

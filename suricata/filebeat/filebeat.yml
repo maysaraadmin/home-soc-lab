@@ -1,0 +1,79 @@
+# Filebeat configuration for Suricata logs
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /var/log/suricata/eve.json
+  json.keys_under_root: true
+  json.overwrite_keys: true
+  json.add_error_key: true
+  fields:
+    type: suricata
+  fields_under_root: true
+  tags: ["suricata", "ids"]
+
+# Configure processors to enhance events
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~
+  - drop_fields:
+      fields: ["ecs", "agent.ephemeral_id", "agent.id", "agent.version", "log.offset"]
+      ignore_missing: true
+
+# Output to Elasticsearch
+output.elasticsearch:
+  hosts: ["${ELASTICSEARCH_HOSTS}"]
+  username: "${ELASTICSEARCH_USERNAME}"
+  password: "${ELASTICSEARCH_PASSWORD}"
+  index: "suricata-%{+yyyy.MM.dd}"
+  pipeline: "filebeat-%{[agent.version]}-suricata-pipeline"
+  ssl:
+    verification_mode: none
+
+# Enable modules
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: true
+  reload.period: 10s
+
+# Configure logging
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /usr/share/filebeat/logs
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+
+# Enable monitoring
+monitoring:
+  enabled: true
+  cluster_uuid: ${HOSTNAME}
+
+# Setup ILM
+setup.ilm:
+  enabled: true
+  policy_name: "suricata"
+  rollover_alias: "suricata"
+  pattern: "{now/d}-000001"
+  policy_file: "/usr/share/filebeat/ilm.json"
+
+# Load template for custom index mapping
+setup.template:
+  name: "suricata"
+  pattern: "suricata-*"
+  enabled: true
+  overwrite: true
+  settings:
+    index:
+      number_of_shards: 1
+      number_of_replicas: 0
+      codec: best_compression
+      mapping:
+        total_fields.limit: 10000
+
+# Setup dashboards
+setup.dashboards.enabled: true

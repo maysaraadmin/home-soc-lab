@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.2
+    container_name: elasticsearch-soc
+    environment:
+      - node.name=elasticsearch-soc
+      - cluster.name=soc-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms4g -Xmx4g"
+      - ELASTIC_PASSWORD=YourSecurePassword123!
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.transport.ssl.enabled=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+      - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./certs:/usr/share/elasticsearch/config/certs
+      - ./snapshots:/mnt/backups
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - soc_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"yellow\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.2
+    container_name: kibana-soc
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch-soc:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=YourSecurePassword123!
+      - SERVER_HOST=0.0.0.0
+      - SERVER_NAME=kibana-soc
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - soc_network
+    restart: unless-stopped
+
+  elasticsearch-curator:
+    image: bobrik/curator:5.8.4
+    container_name: elasticsearch-curator
+    volumes:
+      - ./curator:/config
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch-soc
+      - ELASTICSEARCH_PORT=9200
+      - ELASTICSEARCH_USER=elastic
+      - ELASTICSEARCH_PASSWORD=YourSecurePassword123!
+    depends_on:
+      - elasticsearch
+    networks:
+      - soc_network
+    restart: unless-stopped
+
+networks:
+  soc_network:
+    driver: bridge
+    external: true
+
+volumes:
+  es_data:
+    driver: local

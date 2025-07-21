@@ -1,0 +1,123 @@
+# Custom Falco rules for SOC container security
+
+- rule: Terminal shell in container
+  desc: A shell was used as the entrypoint/exec point into a container with an attached terminal.
+  condition: >
+    spawned_process and container
+    and shell_procs and proc.tty != 0
+    and container_entrypoint
+    and not user_expected_terminal_shell_in_container_conditions
+  output: >
+    A shell was spawned in a container with an attached terminal (user=%user.name user_loginuid=%user.loginuid %container.info
+    shell=%proc.name parent=%proc.pname cmdline=%proc.cmdline terminal=%proc.tty container_id=%container.id image=%container.image.repository)
+  priority: NOTICE
+  tags: [container, shell, mitre_execution]
+  append: false
+
+- rule: New container started
+  desc: A new container has been started
+  condition: >
+    container
+    and container_started
+  output: >
+    Container started (user=%user.name command=%proc.cmdline %container.info image=%container.image.repository:%container.image.tag)
+  priority: INFO
+  tags: [container, lifecycle]
+
+- rule: Container running as root
+  desc: A container is running as root user
+  condition: >
+    container and container_info
+    and not container.image.repository in (trusted_images)
+    and container.user = "root"
+  output: >
+    Container running as root (user=%user.name %container.info image=%container.image.repository)
+  priority: WARNING
+  tags: [container, users, mitre_privilege_escalation]
+
+- rule: Sensitive mount in container
+  desc: Container started with sensitive mount
+  condition: >
+    container and container_info
+    and (container.mount.dest in (sensitive_mounts) or container.mount.dest =~ "/etc/")
+  output: >
+    Container started with sensitive mount (user=%user.name %container.info image=%container.image.repository mount=%container.mount.dest)
+  priority: WARNING
+  tags: [container, filesystem, mitre_persistence]
+
+- rule: Privileged container started
+  desc: A privileged container was started
+  condition: >
+    container and container_info
+    and container.privileged=true
+  output: >
+    Privileged container started (user=%user.name %container.info image=%container.image.repository)
+  priority: WARNING
+  tags: [container, mitre_privilege_escalation]
+
+- rule: Unexpected process in container
+  desc: A process not commonly seen in containers was found running
+  condition: >
+    spawned_process and container
+    and not proc.name in (container_binaries)
+    and not proc.pname in (shell_binaries)
+    and not proc.cmdline in (expected_container_cmdlines)
+  output: >
+    Unexpected process in container (user=%user.name command=%proc.cmdline %container.info image=%container.image.repository)
+  priority: NOTICE
+  tags: [container, process, mitre_execution]
+
+- rule: Modified /etc/passwd or /etc/shadow
+  desc: An attempt to modify /etc/passwd or /etc/shadow was detected
+  condition: >
+    container and write_etc_passwd_or_shadow
+  output: >
+    Sensitive file modified (user=%user.name command=%proc.cmdline file=%fd.name %container.info)
+  priority: CRITICAL
+  tags: [container, filesystem, mitre_persistence]
+
+- rule: K8s API server connection
+  desc: Connection to K8s API server from container
+  condition: >
+    container and evt.type=connect and evt.dir=< and (fd.sip=127.0.0.1 or fd.sip=::1) and fd.sport!=0 and fd.sip.name=kubernetes
+  output: >
+    Connection to K8s API server (user=%user.name command=%proc.cmdline %container.info)
+  priority: WARNING
+  tags: [container, network, mitre_discovery]
+
+# Macro definitions
+- macro: container_binaries
+  items: [
+    "docker-entrypoint.sh", "tini", "docker-init", "docker"
+  ]
+
+- macro: shell_binaries
+  items: [
+    "sh", "bash", "dash", "zsh", "ksh", "csh", "tcsh"
+  ]
+
+- macro: sensitive_mounts
+  items: [
+    "/", "/etc", "/var/run/docker.sock", "/var/lib/kubelet", 
+    "/etc/kubernetes", "/root/.kube"
+  ]
+
+- macro: trusted_images
+  items: [
+    "docker.io/library/alpine", "docker.io/library/busybox",
+    "docker.io/library/debian", "docker.io/library/ubuntu"
+  ]
+
+# Expected command lines for containers
+- list: expected_container_cmdlines
+  items: [
+    "/bin/sh -c #(nop) CMD [\"/bin/sh\"]",
+    "/bin/sh -c #(nop) ENTRYPOINT [\"/docker-entrypoint.sh\"]"
+  ]
+
+# Expected conditions for terminal shells in containers
+- macro: user_expected_terminal_shell_in_container_conditions
+  condition: >
+    container.image.repository in (trusted_images)
+    and proc.name in (shell_binaries)
+    and proc.cmdline in (expected_container_cmdlines)

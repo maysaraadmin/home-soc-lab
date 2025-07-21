@@ -1,0 +1,44 @@
+groups:
+- name: security.rules
+  rules:
+    # Authentication alerts
+    - alert: HighFailedLoginAttempts
+      expr: rate(failed_login_attempts_total[5m]) > 5
+      for: 5m
+      labels:
+        severity: critical
+        service: auth
+      annotations:
+        summary: "High failed login attempts"
+        description: "{{ $value }} failed logins/5m on {{ $labels.instance }}"
+
+    # Container security alerts
+    - alert: PrivilegedContainer
+      expr: container_privileged == 1
+      labels:
+        severity: warning
+        service: docker
+      annotations:
+        summary: "Privileged container detected"
+        description: "{{ $labels.container_name }} is running in privileged mode"
+
+    # File integrity alerts
+    - alert: SensitiveFileModified
+      expr: file_modification_events_total{path=~"/etc/.*|/root/.*"} > 0
+      labels:
+        severity: critical
+        service: filesystem
+      annotations:
+        summary: "Sensitive file modified"
+        description: "{{ $labels.path }} was modified on {{ $labels.instance }}"
+
+    # Network security alerts
+    - alert: PortScanDetected
+      expr: port_scan_attempts_total > 10
+      for: 1m
+      labels:
+        severity: warning
+        service: network
+      annotations:
+        summary: "Port scan detected"
+        description: "From {{ $labels.source_ip }} to {{ $labels.destination_ip }}"

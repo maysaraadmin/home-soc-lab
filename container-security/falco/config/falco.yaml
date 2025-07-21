@@ -1,0 +1,110 @@
+# Falco configuration file
+
+# Whether to output events in json or text
+json_output: true
+
+# Send logs to standard error
+log_stderr: true
+
+# Send logs to syslog
+log_syslog: true
+
+# Minimum log level to include in logs
+# Can be one of "emergency", "alert", "critical", 
+# "error", "warning", "notice", "info", "debug"
+log_level: info
+
+# Whether to output events in text format
+# This is only useful when json_output is false
+text_output:
+  output: "Event detected: %evt.time.s,%user.name,%container.name,%container.id,%evt.type"
+  keep_alive: 10s
+
+# File output configuration
+file_output:
+  enabled: true
+  keep_alive: 5m
+  filename: /var/log/falco/events.log
+
+# Program output configuration
+program_output:
+  enabled: true
+  keep_alive: 5m
+  program: "jq '{text: .output}' | curl -s -X POST -d @- ${FALCO_WEBHOOK_URL}"
+
+# gRPC server configuration
+grpc:
+  enabled: true
+  bind_address: "0.0.0.0:5060"
+  threadiness: 4
+  private_key: "/etc/falco/certs/server.key"
+  cert_chain: "/etc/falco/certs/server.crt"
+  root_certs: "/etc/falco/certs/ca.crt"
+
+# Falco webserver configuration
+webserver:
+  enabled: true
+  listen_port: 8765
+  k8s_audit_endpoint: "/k8s_audit"
+  ssl_enabled: true
+  ssl_certificate: "/etc/falco/certs/server.crt"
+  ssl_private_key: "/etc/falco/certs/server.key"
+
+# Falco metrics configuration
+metrics:
+  enabled: true
+  statsd_enabled: false
+  statsd_passthrough: false
+  prometheus:
+    enabled: true
+    threadiness: 2
+    listen_port: 8766
+
+# Configuration for the falco client
+client:
+  config_interval: 5s
+  log_level: info
+  buffering: true
+  buffering_size: 1000
+  buffering_duration: 5s
+
+# Configuration for the falco daemon
+daemon:
+  pidfile: "/var/run/falco.pid"
+  user: "root"
+  group: "root"
+  chroot: "/host"
+  log_level: "info"
+  log_stderr: true
+  log_syslog: true
+  syslog_facility: "user"
+  watch_config_files: true
+  rules_file:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/rules.d/
+  load_plugins:
+    - name: json
+      library_path: libjson.so
+      init_config: ""
+
+# Configuration for the falco agent
+agent:
+  grpc:
+    enabled: true
+    bind_address: "0.0.0.0:5061"
+    threadiness: 4
+    private_key: "/etc/falco/certs/agent.key"
+    cert_chain: "/etc/falco/certs/agent.crt"
+    root_certs: "/etc/falco/certs/ca.crt"
+  health_check:
+    enabled: true
+    bind_address: "0.0.0.0:8767"
+  metrics:
+    enabled: true
+    statsd_enabled: false
+    statsd_passthrough: false
+    prometheus:
+      enabled: true
+      threadiness: 2
+      listen_port: 8768

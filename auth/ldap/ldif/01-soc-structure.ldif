@@ -1,0 +1,40 @@
+# Base DN
+dn: dc=soc,dc=local
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: SOC Team
+dc: soc
+
+# SOC Users OU
+dn: ou=users,dc=soc,dc=local
+objectClass: organizationalUnit
+objectClass: top
+ou: users
+description: SOC Team Users
+
+# SOC Groups OU
+dn: ou=groups,dc=soc,dc=local
+objectClass: organizationalUnit
+objectClass: top
+ou: groups
+description: SOC Team Groups
+
+# SOC Admins Group
+dn: cn=soc_admins,ou=groups,dc=soc,dc=local
+objectClass: groupOfNames
+cn: soc_admins
+description: SOC Administrators
+member: cn=admin,dc=soc,dc=local
+
+# SOC Analysts Group
+dn: cn=soc_analysts,ou=groups,dc=soc,dc=local
+objectClass: groupOfNames
+cn: soc_analysts
+description: SOC Analysts
+
+# SOC Viewers Group
+dn: cn=soc_viewers,ou=groups,dc=soc,dc=local
+objectClass: groupOfNames
+cn: soc_viewers
+description: SOC Viewers (Read-only)

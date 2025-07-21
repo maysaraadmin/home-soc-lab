@@ -1,0 +1,151 @@
+# Global configuration
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+  external_labels:
+    environment: 'soc-production'
+    region: 'middle-east-1'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+# Rule files
+rule_files:
+  - 'rules/*.rules.yml'
+  - 'rules/node.rules.yml'
+  - 'rules/container.rules.yml'
+  - 'rules/network.rules.yml'
+  - 'rules/security.rules.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Scrape Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Scrape Alertmanager
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+
+  # Scrape Node Exporter
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    metrics_path: '/metrics'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Scrape Docker Daemon
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['docker-host:9323']
+
+  # Scrape cAdvisor
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # Scrape Blackbox Exporter
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - 'http://prometheus:9090'   # Prometheus
+        - 'http://alertmanager:9093' # Alertmanager
+        - 'http://grafana:3000'      # Grafana
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Scrape Traefik
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8082']
+
+  # Scrape Elasticsearch
+  - job_name: 'elasticsearch'
+    metrics_path: '/_prometheus/metrics'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+
+  # Scrape Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:9121']
+    metrics_path: /scrape
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: redis-exporter:9121
+
+  # Scrape MongoDB
+  - job_name: 'mongodb'
+    static_configs:
+      - targets: ['mongodb:9216']
+
+  # Scrape Kafka
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka:7071']
+
+  # Scrape Zookeeper
+  - job_name: 'zookeeper'
+    static_configs:
+      - targets: ['zookeeper:9141']
+
+  # Scrape HAProxy
+  - job_name: 'haproxy'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['haproxy:9101']
+
+  # Scrape Consul
+  - job_name: 'consul'
+    metrics_path: '/v1/agent/metrics'
+    params:
+      format: ['prometheus']
+    static_configs:
+      - targets: ['consul:8500']
+
+  # Scrape Fluentd
+  - job_name: 'fluentd'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['fluentd:24231']
+
+  # Scrape SOC Services
+  - job_name: 'soc-services'
+    static_configs:
+      - targets:
+        - 'wazuh:55000'    # Wazuh
+        - 'thehive:9000'    # TheHive
+        - 'cortex:9001'     # Cortex
+        - 'misp:80'         # MISP
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

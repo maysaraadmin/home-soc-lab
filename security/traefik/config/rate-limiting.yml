@@ -1,0 +1,59 @@
+http:
+  middlewares:
+    # Global rate limiting
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+        sourceCriterion:
+          ipStrategy: {}
+    
+    # API-specific rate limiting (more restrictive)
+    api-rate-limit:
+      rateLimit:
+        average: 60
+        burst: 30
+        period: "1m"
+        sourceCriterion:
+          requestHeaderName: "X-Forwarded-For"
+    
+    # Authentication endpoints rate limiting (most restrictive)
+    auth-rate-limit:
+      rateLimit:
+        average: 10
+        burst: 5
+        period: "1m"
+        sourceCriterion:
+          requestHeaderName: "X-Forwarded-For"
+    
+    # IP-based blocking for repeated violations
+    ip-blocker:
+      ipWhiteList:
+        sourceRange:
+          - "127.0.0.1/32"
+          # Add your trusted IP ranges here
+        ipStrategy: {}
+    
+    # Basic authentication for admin endpoints
+    auth-basic:
+      basicAuth:
+        users:
+          - "${ADMIN_USER:-admin}:${ADMIN_PASSWORD_HASH}"  # Generate with: htpasswd -nb user password
+    
+    # Redirect HTTP to HTTPS
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+    
+    # Add security headers
+    security-headers:
+      headers:
+        sslRedirect: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 15552000
+        browserXssFilter: true
+        contentTypeNosniff: true
+        frameDeny: true

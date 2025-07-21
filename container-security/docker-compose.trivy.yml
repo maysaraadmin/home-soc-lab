@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  trivy-server:
+    image: aquasec/trivy:0.45.1
+    container_name: trivy-server
+    restart: unless-stopped
+    command: server --listen 0.0.0.0:8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./trivy/cache:/root/.cache/
+    environment:
+      - TRIVY_CACHE_DIR=/root/.cache/trivy
+      - TRIVY_DEBUG=true
+    networks:
+      - soc_network
+
+  trivy-scanner:
+    image: aquasec/trivy:0.45.1
+    container_name: trivy-scanner
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./trivy/reports:/reports
+      - ./trivy/scripts:/scripts
+    environment:
+      - TRIVY_CACHE_DIR=/root/.cache/trivy
+      - TRIVY_SERVER=http://trivy-server:8080
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "while true; do
+        echo 'Running scheduled scan...';
+        /scripts/scan-images.sh;
+        sleep 86400; # 24 hours
+      done"
+    networks:
+      - soc_network
+    depends_on:
+      - trivy-server
+
+networks:
+  soc_network:
+    external: true

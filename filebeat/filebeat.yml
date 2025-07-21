@@ -1,0 +1,196 @@
+# ============================== Filebeat inputs ===============================
+
+filebeat.inputs:
+
+# Wazuh Manager logs
+- type: log
+  enabled: true
+  paths:
+    - /var/log/wazuh/wazuh-manager/archives/archives.json
+    - /var/log/wazuh/wazuh-manager/ossec.log
+  fields:
+    type: wazuh
+    component: manager
+  json.keys_under_root: true
+  json.overwrite_keys: true
+  json.add_error_key: true
+  tags: ["wazuh", "manager"]
+
+# Wazuh API logs
+- type: log
+  enabled: true
+  paths:
+    - /var/log/wazuh/api/archives/archives.json
+    - /var/log/wazuh/api/error.log
+  fields:
+    type: wazuh
+    component: api
+  json.keys_under_root: true
+  json.overwrite_keys: true
+  json.add_error_key: true
+  tags: ["wazuh", "api"]
+
+# Suricata logs
+- type: log
+  enabled: true
+  paths:
+    - /var/log/suricata/eve.json
+  fields:
+    type: suricata
+  json.keys_under_root: true
+  json.overwrite_keys: true
+  json.add_error_key: true
+  tags: ["suricata", "ids"]
+
+# TheHive logs
+- type: log
+  enabled: true
+  paths:
+    - /var/log/thehive/application.log
+  fields:
+    type: thehive
+  multiline.pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+  multiline.negate: true
+  multiline.match: after
+  tags: ["thehive"]
+
+# Cortex logs
+- type: log
+  enabled: true
+  paths:
+    - /var/log/cortex/application.log
+  fields:
+    type: cortex
+  multiline.pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+  multiline.negate: true
+  multiline.match: after
+  tags: ["cortex"]
+
+# MISP logs
+- type: log
+  enabled: true
+  paths:
+    - /var/www/MISP/app/tmp/logs/error.log
+    - /var/www/MISP/app/tmp/logs/resque-*.log
+  fields:
+    type: misp
+  tags: ["misp"]
+
+# System logs
+- type: log
+  enabled: true
+  paths:
+    - /var/log/syslog
+    - /var/log/messages
+  fields:
+    type: system
+  tags: ["system"]
+
+# ============================== Filebeat modules ==============================
+
+filebeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: true
+  reload.period: 10s
+
+# ============================== Processors ====================================
+
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~
+  - drop_fields:
+      fields: ["ecs", "agent.ephemeral_id", "agent.id", "agent.version", "log.offset"]
+      ignore_missing: true
+
+# ============================== Outputs =======================================
+
+# Configure what output to use when sending the data collected by the beat.
+
+# ---------------------------- Elasticsearch Output ----------------------------
+output.elasticsearch:
+  hosts: ["wazuh.indexer:9200"]
+  username: "admin"
+  password: "SecretPassword"
+  indices:
+    - index: "wazuh-%{+yyyy.MM.dd}"
+      when.contains:
+        fields.type: "wazuh"
+    - index: "suricata-%{+yyyy.MM.dd}"
+      when.contains:
+        fields.type: "suricata"
+    - index: "thehive-%{+yyyy.MM.dd}"
+      when.contains:
+        fields.type: "thehive"
+    - index: "cortex-%{+yyyy.MM.dd}"
+      when.contains:
+        fields.type: "cortex"
+    - index: "misp-%{+yyyy.MM.dd}"
+      when.contains:
+        fields.type: "misp"
+    - index: "system-%{+yyyy.MM.dd}"
+      when.contains:
+        fields.type: "system"
+  ssl:
+    verification_mode: none
+
+# ============================== Setup =========================================
+
+# Configure how to initialize the Filebeat index templates
+setup.template:
+  name: "soc"
+  pattern: "soc-*"
+  enabled: true
+  overwrite: true
+  settings:
+    index:
+      number_of_shards: 1
+      number_of_replicas: 0
+      codec: best_compression
+      mapping:
+        total_fields.limit: 10000
+
+# Enable and configure the template loading
+setup.ilm:
+  enabled: true
+  pattern: "{now/d}-000001"
+  policy_name: "soc"
+  rollover_alias: "soc"
+
+# Load the index template for each module
+setup.template.settings:
+  index.number_of_shards: 1
+  index.codec: best_compression
+  _source.enabled: true
+
+# ============================== Monitoring ====================================
+
+# Enable monitoring for Filebeat
+monitoring:
+  enabled: true
+  cluster_uuid: ${HOSTNAME}
+
+# ============================== Logging ======================================
+
+# Logging configuration
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /usr/share/filebeat/logs
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+  interval: 1h
+
+# ============================== X-Pack Monitoring ============================
+
+# X-Pack monitoring
+xpack.monitoring:
+  enabled: true
+  elasticsearch:
+    hosts: ["wazuh.indexer:9200"]
+    username: "admin"
+    password: "SecretPassword"
+    ssl.verification_mode: none

@@ -1,0 +1,113 @@
+## Suricata configuration for SOC environment
+
+# Default log directory
+default-log-dir: /var/log/suricata/
+
+# Configure the type of alert logging
+outputs:
+  - fast:
+      enabled: yes
+      filename: fast.log
+      append: yes
+
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert
+        - http
+        - dns
+        - tls
+        - files
+        - flow
+        - stats
+        - ssh
+        - smtp
+
+# Set the default rule path
+default-rule-path: /etc/suricata/rules
+rule-files:
+  - suricata.rules
+
+# Configure stats logging
+stats:
+  enabled: yes
+  interval: 8
+
+# Configure file extraction
+file-store:
+  enabled: yes
+  log-dir: files
+  force-magic: no
+  force-hash: ["md5","sha1","sha256"]
+
+# Configure HTTP logging
+http-log:
+  enabled: yes
+  extended: yes
+  filetype: regular
+  filename: http.log
+  append: yes
+
+# Configure DNS logging
+dns:
+  query-log: yes
+  answer-log: yes
+
+# Configure TLS logging
+tls-log:
+  enabled: yes
+  extended: yes
+  filetype: regular
+  filename: tls.log
+  append: yes
+
+# Configure packet capture
+pcap:
+  - interface: eth0
+    checksum-validation: yes
+    promisc: yes
+    buffer-size: 512mb
+    runmode: workers
+    defrag: yes
+    tls: yes
+    tls-save: yes
+    tls-certificate-path: /etc/suricata/certs/
+
+# Enable protocol decoders
+decoder:
+  protocols: "tcp udp icmp http dns tls"
+
+# Configure flow settings
+flow:
+  memcap: 128mb
+  hash-size: 65536
+  prealloc: 10000
+  emergency-recovery: 30
+  vlan-use-for-tracking: true
+
+# Configure stream settings
+stream:
+  memcap: 256mb
+  checksum-validation: yes
+  inline: no
+  reassembly:
+    memcap: 512mb
+    depth: 1mb
+    toserver-chunk-size: 2560
+    toclient-chunk-size: 2560
+
+# Configure detection settings
+detection:
+  profile: balanced
+  custom-values:
+    toclient-src-groups: 2
+    toclient-dst-groups: 2
+    toserver-src-groups: 2
+    toserver-dst-groups: 4
+  sgh-mpm-context: full
+  inspection-recursion-limit: 1000
+
+# Configure rule reloading
+rule-reload: true

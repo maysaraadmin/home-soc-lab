@@ -1,0 +1,85 @@
+---
+# Common variables for all hosts
+ansible_python_interpreter: auto_silent
+
+# System settings
+timezone: UTC
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+  - 2.pool.ntp.org
+
+# Docker settings
+docker_version: "20.10"
+docker_users:
+  - "{{ ansible_user }}"
+docker_storage_driver: overlay2
+docker_log_driver: json-file
+docker_log_opts:
+  max-size: "10m"
+  max-file: "3"
+
+# Network settings
+internal_network: 10.10.0.0/16
+subnet_mask: 255.255.0.0
+gateway: 10.10.0.1
+
+# Service versions
+elasticsearch_version: "7.17.0"
+kibana_version: "7.17.0"
+logstash_version: "7.17.0"
+wazuh_version: "4.5.0"
+thehive_version: "4.1.25"
+cortex_version: "3.1.5"
+
+# Security settings
+ssh_port: 22
+fail2ban_ignoreip:
+  - 127.0.0.1/8
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+
+# Backup settings
+backup_dir: /var/backups
+backup_retention_days: 30
+
+# Monitoring settings
+monitoring_enabled: true
+monitoring_retention_days: 90
+alert_emails: []
+
+# Logging settings
+log_retention_days: 365
+log_rotation: daily
+log_compress: true
+log_maxsize: 100M
+
+# SSL/TLS settings
+ssl_country: US
+ssl_state: California
+ssl_locality: San Francisco
+ssl_organization: "Security Operations Center"
+ssl_organizational_unit: SOC
+ssl_common_name: "{{ inventory_hostname }}"
+ssl_email: admin@example.com
+ssl_days: 3650
+
+# SOC specific settings
+soc_domain: soc.example.com
+soc_admin_email: soc-admin@example.com
+
+# High availability settings
+ha_enabled: false
+ha_virtual_ip: 10.10.0.100
+ha_nodes: []
+
+# Container registry settings
+registry_url: ""
+registry_username: ""
+registry_password: ""
+
+# Proxy settings
+http_proxy: ""
+https_proxy: ""
+no_proxy: "localhost,127.0.0.1,::1"

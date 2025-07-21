@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # Traefik as reverse proxy with WAF and security features
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - soc_network
+      - soc_internal
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./traefik/config/:/etc/traefik/config/
+      - ./traefik/certs/:/etc/traefik/certs/
+      - ./waf/rules:/etc/traefik/waf
+    environment:
+      - CF_API_EMAIL=${CF_API_EMAIL:-}
+      - CF_API_KEY=${CF_API_KEY:-}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_AUTH_CREDENTIALS:-}"
+
+  # ModSecurity WAF
+  modsecurity:
+    image: owasp/modsecurity-crs:nginx
+    container_name: modsecurity
+    restart: unless-stopped
+    networks:
+      - soc_network
+    volumes:
+      - ./waf/modsecurity.conf:/etc/modsecurity/modsecurity.conf
+      - ./waf/crs-setup.conf:/etc/modsecurity.d/owasp-crs/crs-setup.conf
+      - ./waf/rules:/etc/modsecurity/rules
+    environment:
+      - PARANOIA=1
+      - ANOMALY_INBOUND=5
+      - ANOMALY_OUTBOUND=4
+      - BLOCKING_PARANOIA=1
+
+  # Fail2ban for brute force protection
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: fail2ban
+    restart: unless-stopped
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - /var/log:/var/log:ro
+      - ./security/fail2ban/data:/data
+      - ./security/fail2ban/config:/etc/fail2ban
+    environment:
+      - TZ=${TZ:-UTC}
+      - F2B_LOG_TARGET=/dev/stdout
+      - F2B_LOG_LEVEL=INFO
+      - F2B_DB_PURGE_AGE=30d
+
+networks:
+  soc_network:
+    external: true
+  soc_internal:
+    external: true

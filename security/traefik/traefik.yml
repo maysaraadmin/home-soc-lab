@@ -1,0 +1,80 @@
+# Traefik Global Configuration
+api:
+  dashboard: true
+  debug: false
+  insecure: true  # Disable in production with proper authentication
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+    http:
+      middlewares:
+        - security-headers@file
+        - rate-limit@file
+      tls:
+        certFile: /etc/traefik/certs/cert.pem
+        keyFile: /etc/traefik/certs/key.pem
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: soc_network
+  file:
+    directory: /etc/traefik/config
+    watch: true
+
+log:
+  level: INFO
+  format: common
+  filePath: /var/log/traefik/access.log
+
+accessLog:
+  filePath: /var/log/traefik/access.log
+  format: json
+  fields:
+    defaultMode: keep
+    names:
+      ClientUsername: keep
+      RequestMethod: keep
+      RequestPath: keep
+      RequestProtocol: keep
+      RequestPort: keep
+      RequestScheme: keep
+      RequestHost: keep
+      DownstreamStatus: keep
+      OriginStatus: keep
+      DownstreamContentSize: keep
+      RequestContentSize: keep
+      Duration: keep
+      Overhead: keep
+      RetryAttempts: keep
+      StartLocal: keep
+      StartUTC: keep
+      DownstreamLocal: keep
+      DownstreamRemote: keep
+      OriginDuration: keep
+      OriginContentSize: keep
+      OriginStatus: keep
+      OriginURL: keep
+
+metrics:
+  prometheus:
+    entryPoint: metrics
+
+tracing:
+  datadog:
+    localAgentHostPort: localhost:8126
+    globalTag: "soc"
+    debug: false
+    prioritySampling: true
+
+ping:
+  entryPoint: web

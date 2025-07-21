@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Restic backup service
+  restic-backup:
+    image: restic/restic:0.16.0
+    container_name: restic-backup
+    restart: unless-stopped
+    volumes:
+      - ./config/restic-password.txt:/etc/restic/password.txt
+      - ./config/restic-repo.txt:/etc/restic/repo.txt
+      - ./config/restic-excludes.txt:/etc/restic/excludes.txt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+      - ./backup-data:/data
+      - /var/lib/docker/volumes:/docker-volumes:ro
+      - /home-soc-lab/ELK/vol/elasticsearch_data:/source/elasticsearch:ro
+      - /home-soc-lab/grafana/data:/source/grafana:ro
+      - /home-soc-lab/wazuh/config:/source/wazuh-config:ro
+      - /home-soc-lab/suricata/conf:/source/suricata-conf:ro
+      - /home-soc-lab/thehive/conf:/source/thehive-conf:ro
+      - /home-soc-lab/cortex/conf:/source/cortex-conf:ro
+      - /home-soc-lab/misp/config:/source/misp-conf:ro
+    environment:
+      - RESTIC_REPOSITORY_FILE=/etc/restic/repo.txt
+      - RESTIC_PASSWORD_FILE=/etc/restic/password.txt
+      - BACKUP_CRON=0 2 * * *  # Daily at 2 AM
+      - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --keep-monthly 12
+    entrypoint: /bin/sh -c "chmod +x /scripts/*.sh && /scripts/entrypoint.sh"
+    networks:
+      - soc_storage
+
+  # Backup verification service
+  backup-verify:
+    image: restic/restic:0.16.0
+    container_name: backup-verify
+    restart: on-failure
+    volumes:
+      - ./config/restic-password.txt:/etc/restic/password.txt
+      - ./config/restic-repo.txt:/etc/restic/repo.txt
+      - ./scripts/verify-backup.sh:/scripts/verify-backup.sh
+    environment:
+      - RESTIC_REPOSITORY_FILE=/etc/restic/repo.txt
+      - RESTIC_PASSWORD_FILE=/etc/restic/password.txt
+      - VERIFY_CRON=0 3 * * 0  # Weekly on Sunday at 3 AM
+    entrypoint: /bin/sh -c "chmod +x /scripts/verify-backup.sh && /scripts/verify-backup.sh"
+    depends_on:
+      - restic-backup
+    networks:
+      - soc_storage
+
+  # Backup monitoring and notification
+  backup-monitor:
+    image: python:3.9-alpine
+    container_name: backup-monitor
+    restart: unless-stopped
+    volumes:
+      - ./scripts/monitor-backups.py:/app/monitor-backups.py
+      - ./config/alert-webhook.txt:/app/alert-webhook.txt
+    command: >
+      sh -c "pip install requests && 
+             echo '0 4 * * * python /app/monitor-backups.py' > /etc/crontabs/root && 
+             crond -f"
+    networks:
+      - soc_monitoring
+
+networks:
+  soc_storage:
+    external: true
+  soc_monitoring:
+    external: true

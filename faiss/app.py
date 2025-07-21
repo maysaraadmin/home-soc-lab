@@ -156,6 +156,7 @@ def initialize_index() -> None:
     
     Raises:
         RuntimeError: If there's an error initializing the index
+        HTTPException: If there's a service initialization error
     """
     global state
     
@@ -189,18 +190,36 @@ def initialize_index() -> None:
             except faiss.FaissException as e:
                 logger.error(f"FAISS error loading index: {str(e)}")
                 logger.info("Attempting to create a new index due to loading error")
-                _create_new_index()
+                try:
+                    _create_new_index()
+                except Exception as create_error:
+                    logger.error(f"Failed to create new index: {str(create_error)}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to initialize FAISS index"
+                    ) from create_error
                 
         else:
-            logger.warning("No existing index found, creating placeholder")
-            _create_new_index()
-            
+            logger.info("No existing index found, creating new index")
+            try:
+                _create_new_index()
+            except Exception as create_error:
+                logger.error(f"Failed to create new index: {str(create_error)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to initialize FAISS index"
+                ) from create_error
+                
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f"Failed to initialize FAISS index: {str(e)}"
         logger.error(error_msg, exc_info=True)
         state.initialized = False
-        raise RuntimeError(error_msg) from e
-        
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during initialization"
+        ) from e
     finally:
         state.lock = False
 

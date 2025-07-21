@@ -1,0 +1,58 @@
+# Rotate logs for SOC components
+/var/log/soc/*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 0640 root adm
+    sharedscripts
+    postrotate
+        # Send USR1 signal to Fluentd to reopen log files
+        docker kill -s USR1 fluentd 2>/dev/null || true
+    endscript
+}
+
+# Wazuh logs
+/var/ossec/logs/*.log {
+    daily
+    missingok
+    rotate 7
+    compress
+    delaycompress
+    notifempty
+    create 0640 ossec ossec
+    sharedscripts
+    postrotate
+        /var/ossec/bin/wazuh-control restart > /dev/null 2>&1 || true
+    endscript
+}
+
+# Suricata logs
+/var/log/suricata/*.log {
+    daily
+    missingok
+    rotate 7
+    compress
+    delaycompress
+    notifempty
+    create 0640 suricata suricata
+    sharedscripts
+    postrotate
+        # Reload Suricata configuration
+        docker kill -s HUP suricata 2>/dev/null || true
+    endscript
+}
+
+# Docker container logs
+/var/lib/docker/containers/*/*.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    copytruncate
+    notifempty
+    maxsize 100M
+}

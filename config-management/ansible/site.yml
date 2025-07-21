@@ -1,0 +1,23 @@
+---
+# Main Ansible playbook for SOC configuration management
+- name: Apply SOC configurations
+  hosts: all
+  become: true
+  vars_files:
+    - group_vars/all/vault.yml
+    - group_vars/all/vars.yml
+  
+  roles:
+    - common
+    - docker
+    - security
+    - monitoring
+
+- name: Validate configurations
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Run configuration validation
+      include_role:
+        name: validation
+      tags: [validation]
