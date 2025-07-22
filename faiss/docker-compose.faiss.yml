@@ -73,7 +73,7 @@ services:
 networks:
   default:
     external: true
-    name: home-soc-lab_thehive
+    name: thehive_default
 
 volumes:
   faiss_data:
