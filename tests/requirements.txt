@@ -1,0 +1,14 @@
+# Test dependencies
+pytest>=6.2.5
+pytest-cov>=2.12.1
+pytest-html>=3.1.1
+pytest-xdist>=2.3.0
+requests>=2.26.0
+pyyaml>=5.4.1
+bandit>=1.7.0
+pylint>=2.11.1
+mypy>=0.910
+black>=21.9b0
+flake8>=4.0.1
+responses>=0.13.4  # For mocking HTTP requests in tests
+python-dotenv>=0.19.1  # For loading environment variables

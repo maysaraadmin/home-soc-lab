@@ -1,0 +1,59 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Docker monitoring
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['docker.for.win.localhost:9323']
+
+  # TheHive metrics
+  - job_name: 'thehive'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['thehive:9000']
+
+  # Cortex metrics
+  - job_name: 'cortex'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['cortex:9001']
+
+  # Node Exporter
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # cAdvisor
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # Wazuh metrics
+  - job_name: 'wazuh'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['wazuh.manager:55000']
+
+  # Blackbox exporter
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://thehive:9000
+        - http://cortex:9001
+        - http://misp:80
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115

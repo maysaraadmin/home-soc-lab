@@ -1,0 +1,168 @@
+# ======================== Elasticsearch Configuration =========================
+#
+# NOTE: Elasticsearch comes with reasonable defaults for most settings.
+#       Before you set out to tweak and tune the configuration, make sure you
+#       understand what you are modifying and why.
+
+# ---------------------------------- Cluster -----------------------------------
+cluster.name: soc-cluster
+node.name: ${HOSTNAME}
+node.roles: [master, data, ingest]
+
+# ----------------------------------- Paths ------------------------------------
+path.data: /usr/share/elasticsearch/data
+path.logs: /var/log/elasticsearch
+path.repo: ["/mnt/backups"]
+
+# ---------------------------------- Network -----------------------------------
+network.host: 0.0.0.0
+http.port: 9200
+transport.port: 9300
+
+# --------------------------------- Discovery ----------------------------------
+discovery.seed_hosts: []
+discovery.type: single-node
+
+# ----------------------------- Memory Management ------------------------------
+# Configure the jvm.options file for these settings
+# -Xms4g
+# -Xmx4g
+
+# ---------------------------------- Various -----------------------------------
+# Enable security features
+xpack.security.enabled: true
+xpack.security.authc.api_key.enabled: true
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.verification_mode: certificate
+xpack.security.transport.ssl.keystore.path: certs/elastic-certificates.p12
+xpack.security.transport.ssl.truststore.path: certs/elastic-certificates.p12
+
+# Enable audit logging
+xpack.security.audit.enabled: true
+xpack.security.audit.logfile.events.include: authentication_failed,access_denied,anonymous_access_denied,authentication_success,tampered_request,run_as_denied,run_as_granted,connection_denied
+xpack.security.audit.logfile.events.exclude: _all
+
+# Enable monitoring
+xpack.monitoring.collection.enabled: true
+xpack.monitoring.exporters.my_local:
+  type: local
+  use_ingest: false
+  index_name_time_format: yyyy-MM
+
+# Enable alerting
+xpack.alerting.enabled: true
+
+# Enable watcher
+xpack.watcher.enabled: true
+
+# Enable SQL access
+xpack.sql.enabled: true
+
+# Enable SSL/TLS for HTTP API
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.keystore.path: certs/elastic-certificates.p12
+xpack.security.http.ssl.truststore.path: certs/elastic-certificates.p12
+
+# Enable CORS
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+http.cors.allow-headers: X-Requested-With,Content-Type,Content-Length,Authorization
+
+# Enable slow query logging
+index.search.slowlog.threshold.query.warn: 10s
+index.search.slowlog.threshold.query.info: 5s
+index.search.slowlog.threshold.query.debug: 2s
+index.search.slowlog.threshold.query.trace: 500ms
+
+# Enable index lifecycle management
+xpack.ilm.enabled: true
+
+# Configure index templates for SOC components
+setup.ilm.check_exists: false
+
+# Configure snapshot lifecycle management
+xpack.slm.enabled: true
+
+# Configure remote clusters for cross-cluster search
+# cluster.remote.remote_cluster.seeds: ["remote-cluster:9300"]
+
+# Configure shard allocation awareness
+# cluster.routing.allocation.awareness.attributes: rack
+
+# Configure shard allocation filtering
+# cluster.routing.allocation.include.zone: zone1
+
+# Configure recovery settings
+indices.recovery.max_bytes_per_sec: 100mb
+cluster.routing.allocation.node_initial_primaries_recoveries: 4
+cluster.routing.allocation.node_concurrent_recoveries: 2
+
+# Configure thread pools
+thread_pool:
+  write:
+    size: 16
+    queue_size: 10000
+  search:
+    size: 16
+    queue_size: 1000
+  index:
+    queue_size: 500
+
+# Configure field data circuit breaker
+indices.breaker.fielddata.limit: 60%
+indices.breaker.request.limit: 60%
+indices.breaker.total.limit: 95%
+
+# Configure search settings
+indices.query.bool.max_clause_count: 10000
+
+# Enable compression for stored fields
+index.codec: best_compression
+
+# Configure refresh interval
+index.refresh_interval: 30s
+
+# Configure translog
+index.translog.durability: async
+index.translog.sync_interval: 30s
+index.translog.flush_threshold_size: 1gb
+
+# Configure merge policy
+index.merge.scheduler.max_thread_count: 1
+index.merge.policy.segments_per_tier: 10
+index.merge.policy.max_merge_at_once: 10
+
+# Enable slow log for indexing
+index.indexing.slowlog.threshold.index.warn: 10s
+index.indexing.slowlog.threshold.index.info: 5s
+index.indexing.slowlog.threshold.index.debug: 2s
+index.indexing.slowlog.threshold.index.trace: 500ms
+index.indexing.slowlog.source: 1000
+
+# Enable mapping total fields limit
+index.mapping.total_fields.limit: 5000
+
+# Enable dynamic mapping
+index.mapping.dynamic: true
+
+# Enable disk allocation decider
+cluster.routing.allocation.disk.threshold_enabled: true
+cluster.routing.allocation.disk.watermark.low: 85%
+cluster.routing.allocation.disk.watermark.high: 90%
+cluster.routing.allocation.disk.watermark.flood_stage: 95%
+cluster.info.update.interval: 1m
+
+# Enable shard request cache
+indices.requests.cache.size: 2%
+
+# Enable field data loading
+indices.fielddata.cache.size: 30%
+
+# Enable query cache
+indices.queries.cache.size: 10%
+
+# Enable request circuit breaker
+network.breaker.inflight_requests.limit: 100%
+
+# Enable script compilation circuit breaker
+script.max_compilations_rate: 150/5m

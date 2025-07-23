@@ -1,5 +1,8 @@
 # Environment variables
 .env
+.env.*
+!.env.example
+secrets/
 
 # Python
 __pycache__/
@@ -22,11 +25,15 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Virtual Environment
 venv/
 env/
 ENV/
+.venv/
 
 # IDE
 .idea/
@@ -34,19 +41,126 @@ ENV/
 *.swp
 *.swo
 *~
+.project
+.pydevproject
+.settings/
 
 # Docker
 *.log
 *.sql
 *.sqlite
+*.bak
+*.tmp
+*.temp
 
 # Local development
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# SOC specific
+# Elasticsearch
+data/elasticsearch/**/*
+!data/elasticsearch/.gitkeep
+
+# Database files
+data/**/*.rdb
+data/**/*.aof
+data/**/*.log
+data/**/*.pid
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Backups
+*.bak
+*.backup
+*.swp
+*~
 
 # FAISS index files
 *.faiss
 *.index
+
+# Sensitive files
+**/secrets.yml
+**/secrets.yaml
+**/secrets.json
+**/credentials*
+**/password*
+**/token*
+**/key*
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12
+**/*.pfx
+**/*.p7b
+**/*.p7c
+**/*.p7s
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Ansible
+*.retry
+.ansible/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Local development
+.idea/
+*.iml
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Local development
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local development
+.idea/
+*.iml
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
 
 # Data directories
 faiss-service/data/*
