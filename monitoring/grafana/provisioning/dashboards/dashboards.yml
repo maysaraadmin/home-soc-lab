@@ -1,32 +1,68 @@
 apiVersion: 1
 
 providers:
-  # Main SOC dashboard
-  - name: 'SOC Monitoring'
+  # Wazuh dashboards
+  - name: 'Wazuh'
     orgId: 1
-    folder: 'SOC'
+    folder: 'Wazuh'
     type: file
     disableDeletion: false
     editable: true
     options:
-      path: /etc/grafana/provisioning/dashboards/soc
+      path: /etc/grafana/dashboards/wazuh
+      foldersFromFilesStructure: true
 
-  # System monitoring dashboards
-  - name: 'System Monitoring'
+  # Suricata dashboards
+  - name: 'Suricata'
+    orgId: 1
+    folder: 'Suricata'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/dashboards/suricata
+      foldersFromFilesStructure: true
+
+  # TheHive dashboards
+  - name: 'TheHive'
+    orgId: 1
+    folder: 'TheHive'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/dashboards/thehive
+      foldersFromFilesStructure: true
+
+  # Cortex dashboards
+  - name: 'Cortex'
+    orgId: 1
+    folder: 'Cortex'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/dashboards/cortex
+      foldersFromFilesStructure: true
+
+  # MISP dashboards
+  - name: 'MISP'
+    orgId: 1
+    folder: 'MISP'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/dashboards/misp
+      foldersFromFilesStructure: true
+
+  # System dashboards
+  - name: 'System'
     orgId: 1
     folder: 'System'
     type: file
     disableDeletion: false
     editable: true
     options:
-      path: /etc/grafana/provisioning/dashboards/system
-
-  # Security dashboards
-  - name: 'Security Dashboards'
-    orgId: 1
-    folder: 'Security'
-    type: file
-    disableDeletion: false
-    editable: true
-    options:
-      path: /etc/grafana/provisioning/dashboards/security
+      path: /etc/grafana/dashboards/system
+      foldersFromFilesStructure: true
