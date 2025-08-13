@@ -1,0 +1,242 @@
+# Docker Compose file for SOC Environment
+# Network configuration
+networks:
+  soc_network:
+    name: soc_network
+    driver: bridge
+    attachable: true
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+
+  soc_internal:
+    name: soc_internal
+    driver: bridge
+    internal: true
+    attachable: true
+
+  soc_monitoring:
+    name: soc_monitoring
+    driver: bridge
+    attachable: true
+
+  soc_storage:
+    name: soc_storage
+    driver: bridge
+    internal: true
+    attachable: true
+
+volumes:
+  es_data:
+  wazuh_es_data:
+  cassandra_data:
+  postgres_data:
+  mysql_data:
+  redis_data:
+  thehive_data:
+  thehive_logs:
+  thehive_files:
+  cortex_data:
+  cortex_logs:
+  wazuh_data:
+  wazuh_logs:
+  wazuh_queue:
+  wazuh_multigroups:
+  wazuh_integrations:
+  wazuh_active_response:
+  wazuh_agentless:
+  wazuh_wodles:
+  filebeat_etc:
+  filebeat_var:
+  misp_data:
+  shuffle_apps:
+  shuffle_files:
+  shuffle_database:
+
+secrets:
+  elastic_username:
+    file: ./docker/secrets/elastic_username
+  elastic_password:
+    file: ./docker/secrets/elastic_password
+  postgres_user:
+    file: ./docker/secrets/postgres_user
+  postgres_password:
+    file: ./docker/secrets/postgres_password
+  cassandra_user:
+    file: ./docker/secrets/cassandra_user
+  cassandra_password:
+    file: ./docker/secrets/cassandra_password
+
+services:
+  # ========== Elasticsearch ==========
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.7
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD_FILE=/run/secrets/elastic_password
+      - ELASTIC_USERNAME_FILE=/run/secrets/elastic_username
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m"
+    secrets:
+      - source: elastic_password
+        target: elastic_password
+      - source: elastic_username
+        target: elastic_username
+      - bootstrap.memory_lock=false
+      - http.host=0.0.0.0
+      - transport.host=0.0.0.0
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - cluster.routing.allocation.disk.watermark.low=95%
+      - cluster.routing.allocation.disk.watermark.high=98%
+      - cluster.routing.allocation.disk.watermark.flood_stage=99%
+      - action.destructive_requires_name=false
+      - logger.org.elasticsearch=warn
+      - logger.org.elasticsearch.cluster.service.MasterService=error
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - soc_network
+      - soc_storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f -u ${ELASTIC_USERNAME}:${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health?pretty | grep -q '\"status\" : \"green\"' || curl -s -f -u ${ELASTIC_USERNAME}:${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health?pretty | grep -q '\"status\" : \"yellow\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+
+  # ========== Databases ==========
+  cassandra:
+    image: bitnami/cassandra:3.11
+    container_name: cassandra
+    environment:
+      - CASSANDRA_CLUSTER_NAME=thp
+      - CASSANDRA_PASSWORD_FILE=/run/secrets/cassandra_password
+      - CASSANDRA_USER_FILE=/run/secrets/cassandra_user
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
+      - CASSANDRA_ENABLE_REMOTE_CONNECTION=true
+    secrets:
+      - source: cassandra_password
+        target: cassandra_password
+      - source: cassandra_user
+        target: cassandra_user
+      # Bitnami specific environment variables
+      - CASSANDRA_USERNAME=cassandra
+      - CASSANDRA_SEEDS=cassandra
+      - CASSANDRA_ENABLE_USER_DEFINED_FUNCTIONS=true
+    volumes:
+      - cassandra_data:/bitnami/cassandra
+    networks:
+      - soc_network
+      - soc_storage
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  postgres:
+    image: postgres:13-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/postgres_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: thehive
+    secrets:
+      - source: postgres_user
+        target: postgres_user
+      - source: postgres_password
+        target: postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - soc_network
+      - soc_storage
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========== Core Services ==========
+  thehive:
+    image: thehiveproject/thehive4:latest
+    container_name: thehive
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - JOB_DATABASE=cassandra
+      - STORAGE_PROVIDER=cassandra
+      - CASSANDRA_SEED_HOSTS=cassandra
+      - CASSANDRA_KEYSPACE=thehive
+      - CASSANDRA_USERNAME_FILE=/run/secrets/cassandra_user
+      - CASSANDRA_PASSWORD_FILE=/run/secrets/cassandra_password
+      - CASSANDRA_AUTHENTICATION_ENABLED=true
+      - CASSANDRA_NATIVE_TRANSPORT_PORT=9042
+      - CASSANDRA_RPC_PORT=9160
+      - ELASTICSEARCH_URI=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=thehive
+      - ELASTICSEARCH_USERNAME_FILE=/run/secrets/elastic_username
+      - ELASTICSEARCH_PASSWORD_FILE=/run/secrets/elastic_password
+      - SEARCH_ENGINE=elasticsearch
+    volumes:
+      - thehive_data:/etc/thehive
+      - thehive_logs:/var/log/thehive
+      - thehive_files:/opt/thp/thehive/files
+    networks:
+      - soc_network
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Add other services following the same pattern...
+
+  # ========== Traefik for Reverse Proxy ==========
+  traefik:
+    image: traefik:v2.5
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.leresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.leresolver.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.leresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/letsencrypt:/letsencrypt
+    networks:
+      - soc_network
+    restart: unless-stopped

@@ -1,0 +1,464 @@
+version: '3.8'
+
+networks:
+  soc_network:
+    driver: bridge
+
+volumes:
+  # Elasticsearch
+  es_data:
+  wazuh_es_data:
+  
+  # Databases
+  cassandra_data:
+  postgres_data:
+  mysql_data:
+  redis_data:
+  
+  # Application data
+  thehive_data:
+  thehive_logs:
+  thehive_files:
+  cortex_data:
+  cortex_logs:
+  wazuh_data:
+  wazuh_logs:
+  wazuh_queue:
+  wazuh_multigroups:
+  wazuh_integrations:
+  wazuh_active_response:
+  wazuh_agentless:
+  wazuh_wodles:
+  filebeat_etc:
+  filebeat_var:
+  
+  # MISP
+  misp_data:
+  
+  # Shuffle
+  shuffle_apps:
+  shuffle_files:
+  shuffle_database:
+
+services:
+  # ========== Elasticsearch Services ==========
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.7
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:G1ReservePercent=25"
+      - bootstrap.memory_lock=false
+      - "thread_pool.write.queue_size=1000"
+      - "thread_pool.search.queue_size=100"
+      - "thread_pool.search.size=5"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - soc_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ========== Database Services ==========
+  cassandra:
+    image: bitnami/cassandra:3.11
+    container_name: cassandra
+    environment:
+      - CASSANDRA_CLUSTER_NAME=thp
+      - CASSANDRA_DC=datacenter1
+      - CASSANDRA_RACK=rack1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - CASSANDRA_START_RPC=true
+      - CASSANDRA_NUM_TOKENS=16
+      - CASSANDRA_SEEDS=cassandra
+      - CASSANDRA_PASSWORD_SEEDER=no
+      - CASSANDRA_ENABLE_REMOTE_CONNECTION=true
+      - CASSANDRA_ENABLE_USER_DEFINED_FUNCTIONS=true
+      - CASSANDRA_CLIENT_ENCRYPTION=false
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
+      - CASSANDRA_TRANSPORT_PORT_NUMBER=9042
+      - CASSANDRA_JMX_PORT_NUMBER=7199
+      - CASSANDRA_CQL_PORT_NUMBER=9042
+      - CASSANDRA_RPC_PORT_NUMBER=9160
+      - CASSANDRA_ENABLE_USER_DEFINED_FUNCTIONS=true
+      - JVM_OPTS=-Xms256m -Xmx256m -Dcassandra.skip_wait_for_gossip_to_settle=0 -Dcassandra.initial_token=0 -Dcassandra.metrics_enable_jmx=false
+    volumes:
+      - cassandra_data:/bitnami/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -u cassandra -p cassandra -e 'DESCRIBE KEYSPACES' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    networks:
+      - soc_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
+
+  postgres:
+    image: postgres:13-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cortex
+      POSTGRES_DB: cortex
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d/
+    networks:
+      - soc_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cortex"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:6.2-alpine
+    container_name: redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - soc_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      - "MYSQL_USER=misp"
+      - "MYSQL_PASSWORD=example"
+      - "MYSQL_ROOT_PASSWORD=password"
+      - "MYSQL_DATABASE=misp"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - soc_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ========== Core Services ==========
+  thehive:
+    image: thehiveproject/thehive4:latest
+    container_name: thehive
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      cortex:
+        condition: service_healthy
+    environment:
+      - JOB_DATABASE=cassandra
+      - STORAGE_PROVIDER=cassandra
+      - CASSANDRA_SEED_HOSTS=cassandra
+      - CASSANDRA_KEYSPACE=thehive
+      - ELASTICSEARCH_URI=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=thehive
+      - CORTEX_URL=http://cortex:9001
+      - CORTEX_KEY=cortex-api-key
+      - MISP_URL=http://misp
+      - MISP_KEY=misp-api-key
+    volumes:
+      - ./thehive/application.conf:/etc/thehive/application.conf
+      - thehive_data:/etc/thehive
+      - thehive_logs:/var/log/thehive
+      - thehive_files:/opt/thp/thehive/files
+    networks:
+      - soc_network
+    ports:
+      - "9000:9000"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
+
+  cortex:
+    image: thehiveproject/cortex:latest
+    container_name: cortex
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      - JOB_DIRECTORY=/opt/cortex/jobs
+      - CORTEX_SECRET=cortex-secret-key
+      - CORTEX_AUTH_PROVIDERS=local,apiKey
+      - CORTEX_ELASTICSEARCH=http://elasticsearch:9200
+      - CORTEX_ELASTICSEARCH_INDEX=cortex
+      - CORTEX_REDIS_HOST=redis
+      - CORTEX_REDIS_PORT=6379
+      - CORTEX_DATABASE_URL=postgresql://cortex:cortex@postgres:5432/cortex
+    volumes:
+      - ./cortex/application.conf:/etc/cortex/application.conf
+      - cortex_data:/etc/cortex
+      - cortex_logs:/var/log/cortex
+    networks:
+      - soc_network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
+
+  misp:
+    image: coolacid/misp-docker:core-latest
+    container_name: misp
+    depends_on:
+      - redis
+      - mysql
+    environment:
+      - "HOSTNAME=http://misp"
+      - "REDIS_FQDN=redis"
+      - "INIT=true"
+      - "CRON_USER_ID=1"
+      - "DISIPV6=true"
+    networks:
+      - soc_network
+    ports:
+      - "8080:80"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
+
+  misp-modules:
+    image: coolacid/misp-docker:modules-latest
+    container_name: misp-modules
+    environment:
+      - "REDIS_BACKEND=redis"
+    depends_on:
+      - redis
+      - mysql
+    networks:
+      - soc_network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  # ========== Wazuh Services ==========
+  wazuh-manager:
+    image: wazuh/wazuh-manager:4.7.0
+    container_name: wazuh-manager
+    hostname: wazuh.manager
+    depends_on:
+      - wazuh-indexer
+    environment:
+      - INDEXER_URL=https://wazuh-indexer:9200
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - FILEBEAT_SSL_VERIFICATION_MODE=full
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=MyS3cr37P450r.*-
+    volumes:
+      - wazuh_data:/var/ossec/etc
+      - wazuh_logs:/var/ossec/logs
+      - wazuh_queue:/var/ossec/queue
+      - wazuh_multigroups:/var/ossec/var/multigroups
+      - wazuh_integrations:/var/ossec/integrations
+      - wazuh_active_response:/var/ossec/active-response/bin
+      - wazuh_agentless:/var/ossec/agentless
+      - wazuh_wodles:/var/ossec/wodles
+    networks:
+      - soc_network
+    ports:
+      - "1514:1514"
+      - "1515:1515"
+      - "514:514/udp"
+      - "55000:55000"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
+
+  wazuh-indexer:
+    image: wazuh/wazuh-indexer:4.7.0
+    container_name: wazuh-indexer
+    hostname: wazuh.indexer
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - wazuh_es_data:/var/lib/wazuh-indexer
+    networks:
+      - soc_network
+    ports:
+      - "9201:9200"  # Mapped to 9201 to avoid conflict with main Elasticsearch
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
+
+  wazuh-dashboard:
+    image: wazuh/wazuh-dashboard:4.7.0
+    container_name: wazuh-dashboard
+    hostname: wazuh.dashboard
+    depends_on:
+      - wazuh-indexer
+    environment:
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - WAZUH_API_URL=https://wazuh-manager
+      - DASHBOARD_USERNAME=kibanaserver
+      - DASHBOARD_PASSWORD=kibanaserver
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=MyS3cr37P450r.*-
+    networks:
+      - soc_network
+    ports:
+      - "5601:5601"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
+
+
+
+  # ========== Shuffle Services ==========
+  shuffle-frontend:
+    image: ghcr.io/frikky/shuffle-frontend:0.8.64
+    container_name: shuffle-frontend
+    hostname: shuffle-frontend
+    environment:
+      - BACKEND_HOSTNAME=shuffle-backend
+    depends_on:
+      - shuffle-backend
+    networks:
+      - soc_network
+    ports:
+      - "3001:80"
+      - "3443:443"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  shuffle-backend:
+    image: ghcr.io/frikky/shuffle-backend:0.8.64
+    container_name: shuffle-backend
+    hostname: shuffle-backend
+    environment:
+      - DATASTORE_EMULATOR_HOST=shuffle-database:8000
+      - SHUFFLE_APP_HOTLOAD_FOLDER=./shuffle-apps
+      - SHUFFLE_FILE_LOCATION=./shuffle-files
+      - ORG_ID=Shuffle
+      - SHUFFLE_APP_DOWNLOAD_LOCATION=https://github.com/frikky/shuffle-apps
+      - SHUFFLE_DEFAULT_USERNAME=admin
+      - SHUFFLE_DEFAULT_PASSWORD=password
+      - SHUFFLE_DEFAULT_APIKEY=mysecretkey
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - shuffle_apps:/shuffle-apps
+      - shuffle_files:/shuffle-files
+    depends_on:
+      - shuffle-database
+    networks:
+      - soc_network
+    ports:
+      - "5001:5001"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
+
+  shuffle-orborus:
+    image: ghcr.io/frikky/shuffle-orborus:0.8.63
+    container_name: shuffle-orborus
+    hostname: shuffle-orborus
+    environment:
+      - SHUFFLE_APP_SDK_VERSION=0.8.60
+      - SHUFFLE_WORKER_VERSION=0.8.63
+      - ORG_ID=Shuffle
+      - ENVIRONMENT_NAME=Shuffle
+      - BASE_URL=http://shuffle-backend:5001
+      - DOCKER_API_VERSION=1.40
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - soc_network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  shuffle-database:
+    image: frikky/shuffle:database
+    container_name: shuffle-database
+    hostname: shuffle-database
+    volumes:
+      - shuffle_database:/etc/shuffle
+    networks:
+      - soc_network
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+

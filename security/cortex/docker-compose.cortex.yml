@@ -3,42 +3,12 @@ version: '3.8'
 networks:
   cortex_network:
     driver: bridge
+  soc_network:
+    external: true
 
 services:
-  # Elasticsearch for Cortex
-  cortex-elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.7
-    container_name: cortex-elasticsearch
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - http.port=9200
-      - transport.host=0.0.0.0
-      - http.host=0.0.0.0
-      - cluster.routing.allocation.disk.threshold_enabled=false
-      - bootstrap.memory_lock=true
-      - "discovery.zen.minimum_master_nodes=1"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    user: "1000:1000"
-    volumes:
-      - ./vol/elasticsearch_data:/usr/share/elasticsearch/data
-    ports:
-      - "9200:9200"
-    networks:
-      - cortex_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+  # Using main Elasticsearch service instead of separate instance
+  # cortex-elasticsearch service has been removed to use the main Elasticsearch service
 
   # Redis for Cortex
   cortex-redis:
@@ -51,6 +21,7 @@ services:
       - ./vol/redis_data:/data
     networks:
       - cortex_network
+      - soc_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -62,15 +33,21 @@ services:
     image: postgres:13-alpine
     container_name: cortex-postgres
     environment:
-      POSTGRES_USER: cortex
-      POSTGRES_PASSWORD: cortex
+      POSTGRES_USER_FILE: /run/secrets/postgres_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_DB: cortex
+    secrets:
+      - source: postgres_user
+        target: postgres_user
+      - source: postgres_password
+        target: postgres_password
     volumes:
       - cortex_postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     networks:
       - cortex_network
+      - soc_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cortex -d cortex"]
       interval: 5s
@@ -84,23 +61,25 @@ services:
     ports:
       - "9001:9001"
     depends_on:
-      cortex-elasticsearch:
-        condition: service_healthy
       cortex-redis:
         condition: service_healthy
       cortex-postgres:
         condition: service_healthy
+    env_file:
+      - ../../.env  # Load environment variables from the root .env file
     environment:
       - job_directory=/tmp/cortex-jobs
       - CORTEX_AUTH_PROVIDERS=local,apiKey,_anonymous
       - CORTEX_AUTH_ANONYMOUS_GROUP=read-only
       
-      # Elasticsearch configuration - using HTTP only (port 9200)
-      - CORTEX_ES_HOSTS=["http://cortex-elasticsearch:9200"]
-      - CORTEX_ES_INDEX=cortex
+      # Elasticsearch configuration - using the main Elasticsearch service with authentication
+      - CORTEX_ES_HOSTS=["http://elasticsearch:9200"]
+      - CORTEX_ES_INDEX=cortex_6
       - CORTEX_ES_CLIENT_TIMEOUT=30s
       - CORTEX_ES_RETRY=3
       - CORTEX_ES_RETRY_INTERVAL=5s
+      - CORTEX_ES_USERNAME_FILE=/run/secrets/elastic_username
+      - CORTEX_ES_PASSWORD_FILE=/run/secrets/elastic_password
       
       # Redis configuration
       - CORTEX_REDIS_URI=redis://cortex-redis:6379
@@ -108,36 +87,23 @@ services:
       # Database configuration
       - CORTEX_DB_URL=jdbc:postgresql://cortex-postgres:5432/cortex
       - CORTEX_DB_USERNAME=cortex
-      - CORTEX_DB_PASSWORD=cortex
-      - CORTEX_SECRET=changeme
+      - CORTEX_DB_PASSWORD_FILE=/run/secrets/postgres_password
+      - CORTEX_SECRET_FILE=/run/secrets/cortex_secret
     volumes:
       - cortex_data:/data
       - cortex_logs:/var/log/cortex
       - ./cortex/application.conf:/etc/cortex/application.conf
     networks:
       - cortex_network
+      - soc_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9001/api/status"]
       interval: 30s
       timeout: 10s
       retries: 5
 
-  # Kibana for monitoring (optional)
-  cortex-kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.7
-    container_name: cortex-kibana
-    environment:
-      - CORTEX_ELASTICSEARCH_URI=http://cortex-elasticsearch:9200
-      - SERVER_HOST=0.0.0.0
-      - SERVER_NAME=cortex-kibana
-    ports:
-      - "5601:5601"
-    depends_on:
-      cortex-elasticsearch:
-        condition: service_healthy
-    networks:
-      - cortex_network
-    restart: unless-stopped
+  # Using main Elasticsearch service instead of separate Kibana instance
+  # cortex-kibana service has been removed to use the main Elasticsearch service
 
 volumes:
   cortex_es_data:
@@ -145,3 +111,19 @@ volumes:
   cortex_postgres_data:
   cortex_data:
   cortex_logs:
+
+secrets:
+  elastic_username:
+    file: ../../docker/secrets/elastic_username
+  elastic_password:
+    file: ../../docker/secrets/elastic_password
+  postgres_user:
+    file: ../../docker/secrets/postgres_user
+  postgres_password:
+    file: ../../docker/secrets/postgres_password
+  cassandra_user:
+    file: ../../docker/secrets/cassandra_user
+  cassandra_password:
+    file: ../../docker/secrets/cassandra_password
+  cortex_secret:
+    file: ../../docker/secrets/cortex_secret

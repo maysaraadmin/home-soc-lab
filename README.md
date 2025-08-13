@@ -41,7 +41,7 @@ A comprehensive Security Operations Center (SOC) environment with TheHive, Corte
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/maysaraadmin/home-soc-lab.git
    cd home-soc-lab
    ```
 

@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 networks:
   soc_network:
@@ -48,8 +48,11 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
-      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:G1ReservePercent=25"
+      - bootstrap.memory_lock=false
+      - "thread_pool.write.queue_size=1000"
+      - "thread_pool.search.queue_size=100"
+      - "thread_pool.search.size=5"
     ulimits:
       memlock:
         soft: -1
@@ -61,29 +64,61 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9200"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 60s
 
   # ========== Database Services ==========
   cassandra:
-    image: cassandra:3.11
+    image: bitnami/cassandra:3.11
     container_name: cassandra
     environment:
-      - MAX_HEAP_SIZE=2G
-      - HEAP_NEWSIZE=1G
       - CASSANDRA_CLUSTER_NAME=thp
-    volumes:
-      - cassandra_data:/var/lib/cassandra
-    networks:
-      - soc_network
+      - CASSANDRA_DC=datacenter1
+      - CASSANDRA_RACK=rack1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - CASSANDRA_START_RPC=true
+      - CASSANDRA_NUM_TOKENS=16
+      - CASSANDRA_SEEDS=cassandra
+      - CASSANDRA_PASSWORD_SEEDER=no
+      - CASSANDRA_ENABLE_REMOTE_CONNECTION=true
+      - CASSANDRA_ENABLE_USER_DEFINED_FUNCTIONS=true
+      - CASSANDRA_CLIENT_ENCRYPTION=false
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
+      - CASSANDRA_TRANSPORT_PORT_NUMBER=9042
+      - CASSANDRA_JMX_PORT_NUMBER=7199
+      - CASSANDRA_CQL_PORT_NUMBER=9042
+      - CASSANDRA_RPC_PORT_NUMBER=9160
+      - CASSANDRA_ENABLE_USER_DEFINED_FUNCTIONS=true
+      - JVM_OPTS=-Xms512m -Xmx512m -XX:+UseG1GC -XX:G1RSetUpdatingPauseTimePercent=5 -XX:MaxGCPauseMillis=500 -XX:InitiatingHeapOccupancyPercent=70 -Dcassandra.skip_wait_for_gossip_to_settle=0 -Dcassandra.initial_token=0 -Dcassandra.metrics_enable_jmx=false
+      - MAX_HEAP_SIZE=512M
+      - HEAP_NEWSIZE=256M
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 1.5G
+          cpus: '1'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    volumes:
+      - cassandra_data:/bitnami/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -u cassandra -p cassandra -e 'DESCRIBE KEYSPACES' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    networks:
+      - soc_network
 
   postgres:
     image: postgres:13-alpine
@@ -136,41 +171,7 @@ services:
         limits:
           memory: 1G
 
-  # ========== Core Services ==========
-  thehive:
-    image: thehiveproject/thehive4:latest
-    container_name: thehive
-    depends_on:
-      cassandra:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-      cortex:
-        condition: service_healthy
-    environment:
-      - JOB_DATABASE=cassandra
-      - STORAGE_PROVIDER=cassandra
-      - CASSANDRA_SEED_HOSTS=cassandra
-      - CASSANDRA_KEYSPACE=thehive
-      - ELASTICSEARCH_URI=http://elasticsearch:9200
-      - ELASTICSEARCH_INDEX=thehive
-      - CORTEX_URL=http://cortex:9001
-      - CORTEX_KEY=cortex-api-key
-      - MISP_URL=http://misp
-      - MISP_KEY=misp-api-key
-    volumes:
-      - ./thehive/application.conf:/etc/thehive/application.conf
-      - thehive_data:/etc/thehive
-      - thehive_logs:/var/log/thehive
-      - thehive_files:/opt/thp/thehive/files
-    networks:
-      - soc_network
-    ports:
-      - "9000:9000"
-    deploy:
-      resources:
-        limits:
-          memory: 4G
+
 
   cortex:
     image: thehiveproject/cortex:latest
@@ -200,7 +201,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
 
   misp:
     image: coolacid/misp-docker:core-latest
@@ -221,7 +226,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
 
   misp-modules:
     image: coolacid/misp-docker:modules-latest
@@ -271,7 +280,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
 
   wazuh-indexer:
     image: wazuh/wazuh-indexer:4.7.0
@@ -292,7 +305,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
 
   wazuh-dashboard:
     image: wazuh/wazuh-dashboard:4.7.0
@@ -315,7 +332,51 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
+
+  # ========== TheHive Service ==========
+  thehive:
+    image: thehiveproject/thehive4:latest
+    container_name: thehive
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      cortex:
+        condition: service_healthy
+    environment:
+      - JOB_DATABASE=cassandra
+      - STORAGE_PROVIDER=cassandra
+      - CASSANDRA_SEED_HOSTS=cassandra
+      - CASSANDRA_KEYSPACE=thehive
+      - ELASTICSEARCH_URI=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=thehive
+      - CORTEX_URL=http://cortex:9001
+      - CORTEX_KEY=cortex-api-key
+      - MISP_URL=http://misp
+      - MISP_KEY=misp-api-key
+    volumes:
+      - ./thehive/application.conf:/etc/thehive/application.conf
+      - thehive_data:/etc/thehive
+      - thehive_logs:/var/log/thehive
+      - thehive_files:/opt/thp/thehive/files
+    networks:
+      - soc_network
+    ports:
+      - "9000:9000"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
 
   # ========== Shuffle Services ==========
   shuffle-frontend:
@@ -362,7 +423,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 768M
+          cpus: '0.5'
 
   shuffle-orborus:
     image: ghcr.io/frikky/shuffle-orborus:0.8.63

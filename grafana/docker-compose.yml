@@ -1,38 +1,23 @@
-version: '3.8'
-
 services:
   grafana:
-    image: grafana/grafana:10.0.0
-    container_name: grafana-soc
-    restart: unless-stopped
-    user: "0:0"
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=YourSecureGrafanaPassword123!
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_USERS_AUTO_ASSIGN_ORG_ROLE=Viewer
-      - GF_AUTH_ANONYMOUS_ENABLED=false
-      - GF_AUTH_BASIC_ENABLED=true
-      - GF_AUTH_DISABLE_LOGIN_FORM=false
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel,grafana-worldmap-panel,grafana-polystat-panel,flant-statusmap-panel,grafana-simple-json-datasource,grafana-azure-monitor-datasource,grafana-github-datasource,grafana-splunk-datasource,grafana-influxdb-flux-datasource,grafana-azure-data-explorer-datasource,grafana-azure-log-analytics-datasource,marcusolsson-json-datasource,grafana-googlesheets-datasource,grafana-sqlite-datasource,grafana-sentry-datasource,grafana-azure-data-explorer-datasource,grafana-azure-monitor-datasource,grafana-github-datasource,grafana-splunk-datasource,grafana-influxdb-flux-datasource,grafana-azure-log-analytics-datasource,marcusolsson-json-datasource,grafana-googlesheets-datasource,grafana-sqlite-datasource,grafana-sentry-datasource,grafana-azure-data-explorer-datasource,grafana-azure-monitor-datasource,grafana-github-datasource,grafana-splunk-datasource,grafana-influxdb-flux-datasource,grafana-azure-log-analytics-datasource,marcusolsson-json-datasource,grafana-googlesheets-datasource,grafana-sqlite-datasource,grafana-sentry-datasource,grafana-azure-data-explorer-datasource,grafana-azure-monitor-datasource,grafana-github-datasource,grafana-splunk-datasource,grafana-influxdb-flux-datasource,grafana-azure-log-analytics-datasource,marcusolsson-json-datasource,grafana-googlesheets-datasource,grafana-sqlite-datasource,grafana-sentry-datasource,grafana-azure-data-explorer-datasource,grafana-azure-monitor-datasource,grafana-github-datasource,grafana-splunk-datasource,grafana-influxdb-flux-datasource,grafana-azure-log-analytics-datasource,marcusolsson-json-datasource,grafana-googlesheets-datasource,grafana-sqlite-datasource,grafana-sentry-datasource
-    volumes:
-      - ./data:/var/lib/grafana
-      - ./provisioning:/etc/grafana/provisioning
-      - ./dashboards:/etc/grafana/dashboards
-      - ./plugins:/var/lib/grafana/plugins
-    ports:
-      - "3000:3000"
+    image: grafana/grafana-oss
+    container_name: grafana
+    hostname: grafana
     networks:
-      - soc_network
-    depends_on:
-      - elasticsearch
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      - siem-stack
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ../grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ../wazuh/config/wazuh_indexer_ssl_certs/wazuh.indexer.pem:/etc/ssl/certs/wazuh.indexer.pem
+      - ../wazuh/config/wazuh_indexer_ssl_certs/wazuh.indexer-key.pem:/etc/ssl/private/wazuh-indexer-key.pem
+    restart: unless-stopped
+
 
 networks:
-  soc_network:
+  siem-stack:
     external: true
-    name: soc_network
+
+volumes:
+   grafana-storage:
