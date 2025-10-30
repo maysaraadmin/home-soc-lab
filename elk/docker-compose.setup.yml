@@ -1,0 +1,33 @@
+version: '3.5'
+
+services:
+  keystore:
+    image: ${ELASTICSEARCH_IMAGE_NAME}:${ELK_VERSION}
+    build:
+      context: elasticsearch/
+      args:
+        ELK_VERSION: ${ELK_VERSION}
+    command: bash /setup/setup-keystore.sh
+    user: "0"
+    volumes:
+        - ./secrets:/secrets
+        - ./setup/:/setup/
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+
+  upgrade-keystore:
+    extends:
+      service: keystore
+    command: bash /setup/upgrade-keystore.sh
+
+  certs:
+    image: ${ELASTICSEARCH_IMAGE_NAME}:${ELK_VERSION}
+    build:
+      context: elasticsearch/
+      args:
+        ELK_VERSION: ${ELK_VERSION}
+    command: bash /setup/setup-certs.sh
+    user: "0"
+    volumes:
+      - ./secrets:/secrets
+      - ./setup/:/setup
