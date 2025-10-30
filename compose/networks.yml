@@ -1,0 +1,4 @@
+networks:
+  cyber-blue:
+    name: cyber-blue
+    driver: bridge

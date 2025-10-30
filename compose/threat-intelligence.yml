@@ -1,0 +1,36 @@
+services:
+  velociraptor:
+    build: ../velociraptor
+    container_name: velociraptor
+    ports:
+      - "7000:8889" # External port 7000 mapped to GUI port 8889
+      - "8000:8000" # Agent communication port (Frontend)
+    volumes:
+      - ../velociraptor:/velociraptor
+    restart: unless-stopped
+    environment:
+      - VEL_USER=${VEL_USER}
+      - VEL_PASSWORD=${VEL_PASSWORD}
+    networks:
+      - cyber-blue
+
+  caldera:
+    build:
+      context: ../caldera
+      dockerfile: Dockerfile
+      args:
+        - VARIANT=full
+    container_name: caldera
+    hostname: caldera
+    ports:
+      - "7009:8888"
+    volumes:
+      - ../caldera/conf/local.yml:/usr/src/app/conf/local.yml:ro
+      - ../caldera/data:/usr/src/app/data
+      - ../caldera/logs:/usr/src/app/logs
+    networks:
+      - cyber-blue
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+    working_dir: /usr/src/app

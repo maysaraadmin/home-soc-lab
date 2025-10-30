@@ -1,0 +1,56 @@
+services:
+  wireshark:
+    image: lscr.io/linuxserver/wireshark:latest
+    container_name: wireshark
+    cap_add:
+      - NET_ADMIN
+    network_mode: host
+    environment:
+      - CUSTOM_USER=admin
+      - PASSWORD=cyberblue
+      - CUSTOM_PORT=7098 # Change HTTP port
+      - CUSTOM_HTTPS_PORT=7099 # Optional: HTTPS port if needed
+    volumes:
+      - ./wireshark/config:/config
+    ports:
+      - "7099:3001" # HTTPS
+    restart: unless-stopped
+    privileged: true
+
+  suricata:
+    image: stamus/suricata:latest
+    container_name: suricata
+    network_mode: "host" # Use only if you want to sniff actual host traffic
+    volumes:
+      - ./suricata:/etc/suricata
+      - ./suricata/logs:/var/log/suricata
+      - ./suricata/suricata.yaml:/etc/suricata/suricata.yaml
+      - ./suricata/rules:/etc/suricata/rules
+      - ./suricata/classification.config:/etc/suricata/classification.config
+      - ./suricata/reference.config:/etc/suricata/reference.config
+      - /etc/localtime:/etc/localtime:ro
+    command: suricata -c /etc/suricata/suricata.yaml -i ${SURICATA_INT}
+    restart: always
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    privileged: true
+
+  evebox:
+    image: jasonish/evebox
+    container_name: evebox
+    command:
+      - evebox
+      - server
+      - --no-auth
+      - --datastore
+      - sqlite
+      - --input
+      - /var/log/suricata/eve.json
+    ports:
+      - "7015:5636"
+    volumes:
+      - ./suricata/logs:/var/log/suricata:ro
+    restart: always
+    networks:
+      - cyber-blue

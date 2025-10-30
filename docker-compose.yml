@@ -1,99 +1,224 @@
-# Docker Compose file for SOC Environment
-# Network configuration
-networks:
-  soc_network:
-    name: soc_network
-    driver: bridge
-    attachable: true
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16
-          gateway: 172.28.0.1
-
-  soc_internal:
-    name: soc_internal
-    driver: bridge
-    internal: true
-    attachable: true
-
-  soc_monitoring:
-    name: soc_monitoring
-    driver: bridge
-    attachable: true
-
-  soc_storage:
-    name: soc_storage
-    driver: bridge
-    internal: true
-    attachable: true
-
-volumes:
-  es_data:
-  wazuh_es_data:
-  cassandra_data:
-  postgres_data:
-  mysql_data:
-  redis_data:
-  thehive_data:
-  thehive_logs:
-  thehive_files:
-  cortex_data:
-  cortex_logs:
-  wazuh_data:
-  wazuh_logs:
-  wazuh_queue:
-  wazuh_multigroups:
-  wazuh_integrations:
-  wazuh_active_response:
-  wazuh_agentless:
-  wazuh_wodles:
-  filebeat_etc:
-  filebeat_var:
-  misp_data:
-  shuffle_apps:
-  shuffle_files:
-  shuffle_database:
-
-secrets:
-  elastic_username:
-    file: ./docker/secrets/elastic_username
-  elastic_password:
-    file: ./docker/secrets/elastic_password
-  postgres_user:
-    file: ./docker/secrets/postgres_user
-  postgres_password:
-    file: ./docker/secrets/postgres_password
-  cassandra_user:
-    file: ./docker/secrets/cassandra_user
-  cassandra_password:
-    file: ./docker/secrets/cassandra_password
+version: '3.8'
 
 services:
-  # ========== Elasticsearch ==========
+  # Core Services
+  portal:
+    build:
+      context: ./portal
+      dockerfile: Dockerfile
+    container_name: cyber-blue-portal
+    hostname: portal
+    ports:
+      - "5500:5500"
+      - "5443:5443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./portal/logs:/app/logs
+      - ./portal/ssl:/app/ssl:ro
+      - ./velociraptor:/velociraptor
+      - ./wazuh/agents:/wazuh/agents
+      - ./fleet/agents:/fleet/agents
+      - ./caldera/agents:/caldera/agents
+      - ./yara-rules:/opt/yara-rules
+      - ./sigma-rules:/opt/sigma-rules
+      - ./logs:/var/log
+    environment:
+      - PORT=5500
+      - HTTPS_PORT=5443
+      - FLASK_ENV=production
+      - HOST_IP=${HOST_IP:-host.docker.internal}
+      - CYBERBLUE_INSTALL_DIR=${CYBERBLUE_INSTALL_DIR:-/home/ubuntu/CyberBlue}
+      - CYBERBLUE_INSTALL_USER=${CYBERBLUE_INSTALL_USER:-ubuntu}
+      - ENABLE_HTTPS=true
+      - SSL_CERT_PATH=/app/ssl/cert.pem
+      - SSL_KEY_PATH=/app/ssl/key.pem
+      - SECRET_KEY=cyberblue-secure-secret-key-change-in-production
+      - ADMIN_PASSWORD=cyberblue123
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5500/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+    depends_on:
+      - portainer  # Start portainer first if needed for management
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  # Wazuh Stack
+  wazuh:
+    image: wazuh/wazuh-manager:4.12.0
+    container_name: wazuh
+    hostname: wazuh
+    ports:
+      - "1514:1514"
+      - "1515:1515"
+      - "514:514/udp"
+      - "55000:55000"
+    environment:
+      - INDEXER_URL=https://wazuh.indexer:9200
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=admin
+      - API_USERNAME=wazuh
+      - API_PASSWORD=wazuh
+      - METRICS_ENABLED=true
+    volumes:
+      - ./wazuh/etc:/wazuh-etc
+      - ./wazuh/logs:/var/ossec/logs
+      - ./wazuh/queue:/var/ossec/queue
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:55000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+    depends_on:
+      portal:
+        condition: service_healthy
+
+  # Velociraptor
+  velociraptor:
+    build:
+      context: ./velociraptor
+      dockerfile: Dockerfile
+    container_name: velociraptor
+    hostname: velociraptor
+    ports:
+      - "8889:8889"
+      - "8003:8003"
+    volumes:
+      - ./velociraptor:/etc/velociraptor
+      - ./velociraptor/datastore:/var/velociraptor
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8889/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+    depends_on:
+      portal:
+        condition: service_healthy
+
+  # MISP
+  misp:
+    image: matthewvance/stubby-dns:latest
+    container_name: misp
+    hostname: misp
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - MYSQL_DATABASE=misp
+      - MYSQL_USER=misp
+      - MYSQL_PASSWORD=misp
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_HOST=db
+      - MISP_ADMIN_EMAIL=admin@localhost
+      - MISP_ADMIN_PASSPHRASE=ChangeThisDefaultPassword
+      - MYSQL_PORT_NUMBER=3306
+    volumes:
+      - ./misp/config:/var/www/MISP/app/Config
+      - ./misp/logs:/var/www/MISP/app/tmp/logs
+      - ./misp/data:/var/www/MISP/app/files
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+    depends_on:
+      portal:
+        condition: service_healthy
+
+  # TheHive
+  thehive:
+    image: thehiveproject/thehive:latest
+    container_name: thehive
+    hostname: thehive
+    ports:
+      - "9000:9000"
+    environment:
+      - JVM_XMX=4G
+      - SEED_ADMIN_PASSWORD=ChangeMePlease
+      - CONFIG_HTTP_SECRET=ChangeThisSecretKey
+      - APPLICATION_SECRET=ChangeThisSecretKeyToo
+    volumes:
+      - ./thehive/data:/opt/thp/thehive/data
+      - ./thehive/logs:/var/log/thehive
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+    depends_on:
+      portal:
+        condition: service_healthy
+
+  # Cortex
+  cortex:
+    image: thehiveproject/cortex:latest
+    container_name: cortex
+    hostname: cortex
+    ports:
+      - "9001:9001"
+    environment:
+      - JVM_XMX=4G
+      - CORTEX_SECRET=ChangeThisSecretKey
+      - CORTEX_AUTHENTICATION_SECRET=ChangeThisAuthSecret
+      - CORTEX_HTTP_SECRET=ChangeThisHttpSecret
+    volumes:
+      - ./cortex/data:/cortex/data
+      - ./cortex/logs:/var/log/cortex
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+    depends_on:
+      portal:
+        condition: service_healthy
+      thehive:
+        condition: service_healthy
+
+  # Elasticsearch
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.7
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=true
-      - ELASTIC_PASSWORD_FILE=/run/secrets/elastic_password
-      - ELASTIC_USERNAME_FILE=/run/secrets/elastic_username
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m"
-    secrets:
-      - source: elastic_password
-        target: elastic_password
-      - source: elastic_username
-        target: elastic_username
-      - bootstrap.memory_lock=false
-      - http.host=0.0.0.0
-      - transport.host=0.0.0.0
-      - cluster.routing.allocation.disk.threshold_enabled=false
-      - cluster.routing.allocation.disk.watermark.low=95%
-      - cluster.routing.allocation.disk.watermark.high=98%
-      - cluster.routing.allocation.disk.watermark.flood_stage=99%
-      - action.destructive_requires_name=false
-      - logger.org.elasticsearch=warn
-      - logger.org.elasticsearch.cluster.service.MasterService=error
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - "bootstrap.memory_lock=true"
+      - "cluster.routing.allocation.disk.threshold_enabled=false"
+      - "action.destructive_requires_name=false"
     ulimits:
       memlock:
         soft: -1
@@ -102,141 +227,251 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      - es_data:/usr/share/elasticsearch/data
+      - ./elasticsearch/data:/usr/share/elasticsearch/data
+      - ./elasticsearch/logs:/usr/share/elasticsearch/logs
     ports:
       - "9200:9200"
-      - "9300:9300"
-    networks:
-      - soc_network
-      - soc_storage
     healthcheck:
-      test: ["CMD-SHELL", "curl -s -f -u ${ELASTIC_USERNAME}:${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health?pretty | grep -q '\"status\" : \"green\"' || curl -s -f -u ${ELASTIC_USERNAME}:${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health?pretty | grep -q '\"status\" : \"yellow\"'"]
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '1'
-        reservations:
-          memory: 768M
-
-  # ========== Databases ==========
-  cassandra:
-    image: bitnami/cassandra:3.11
-    container_name: cassandra
-    environment:
-      - CASSANDRA_CLUSTER_NAME=thp
-      - CASSANDRA_PASSWORD_FILE=/run/secrets/cassandra_password
-      - CASSANDRA_USER_FILE=/run/secrets/cassandra_user
-      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
-      - CASSANDRA_ENABLE_REMOTE_CONNECTION=true
-    secrets:
-      - source: cassandra_password
-        target: cassandra_password
-      - source: cassandra_user
-        target: cassandra_user
-      # Bitnami specific environment variables
-      - CASSANDRA_USERNAME=cassandra
-      - CASSANDRA_SEEDS=cassandra
-      - CASSANDRA_ENABLE_USER_DEFINED_FUNCTIONS=true
-    volumes:
-      - cassandra_data:/bitnami/cassandra
+    restart: unless-stopped
     networks:
-      - soc_network
-      - soc_storage
+      - cyber-blue
+
+  # Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.9.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=kibana.local
+      - SERVER_BASEPATH=/kibana
+      - NODE_OPTIONS=--max-old-space-size=1024 --max-http-header-size=65536
+      - SERVER_HOST=0.0.0.0
+      - ELASTICSEARCH_REQUESTTIMEOUT=30000
+      - XPACK_SECURITY_ENABLED=false
+      - XPACK_MONITORING_ENABLED=false
+      - SERVER_CORS_ENABLED=true
+      - SERVER_CORS_ORIGIN=["*"]
+      - SERVER_CORS_CREDENTIALS=true
+    ports:
+      - "5601:5601"
+    volumes:
+      - ./kibana/data:/usr/share/kibana/data
     healthcheck:
-      test: ["CMD-SHELL", "nodetool status || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:5601"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 10
       start_period: 60s
-
-  postgres:
-    image: postgres:13-alpine
-    container_name: postgres
-    environment:
-      POSTGRES_USER_FILE: /run/secrets/postgres_user
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-      POSTGRES_DB: thehive
-    secrets:
-      - source: postgres_user
-        target: postgres_user
-      - source: postgres_password
-        target: postgres_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
     networks:
-      - soc_network
-      - soc_storage
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ========== Core Services ==========
-  thehive:
-    image: thehiveproject/thehive4:latest
-    container_name: thehive
+      - cyber-blue
     depends_on:
-      cassandra:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
+      - elasticsearch
+
+  # Graylog
+  graylog:
+    image: graylog/graylog:4.3
+    container_name: graylog
     environment:
-      - JOB_DATABASE=cassandra
-      - STORAGE_PROVIDER=cassandra
-      - CASSANDRA_SEED_HOSTS=cassandra
-      - CASSANDRA_KEYSPACE=thehive
-      - CASSANDRA_USERNAME_FILE=/run/secrets/cassandra_user
-      - CASSANDRA_PASSWORD_FILE=/run/secrets/cassandra_password
-      - CASSANDRA_AUTHENTICATION_ENABLED=true
-      - CASSANDRA_NATIVE_TRANSPORT_PORT=9042
-      - CASSANDRA_RPC_PORT=9160
-      - ELASTICSEARCH_URI=http://elasticsearch:9200
-      - ELASTICSEARCH_INDEX=thehive
-      - ELASTICSEARCH_USERNAME_FILE=/run/secrets/elastic_username
-      - ELASTICSEARCH_PASSWORD_FILE=/run/secrets/elastic_password
-      - SEARCH_ENGINE=elasticsearch
+      - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
+      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/
+      - GRAYLOG_ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     volumes:
-      - thehive_data:/etc/thehive
-      - thehive_logs:/var/log/thehive
-      - thehive_files:/opt/thp/thehive/files
-    networks:
-      - soc_network
+      - ./graylog/data:/usr/share/graylog/data
+      - ./graylog/logs:/var/log/graylog
     ports:
       - "9000:9000"
+      - "1514:1514"
+      - "1514:1514/udp"
+      - "12201:12201"
+      - "12201:12201/udp"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+    depends_on:
+      - elasticsearch
+      - mongo
+
+  # MongoDB for Graylog
+  mongo:
+    image: mongo:4.2
+    container_name: mongo
+    volumes:
+      - ./mongo/data/db:/data/db
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+
+  # ARKIME
+  arkime:
+    image: arkime/arkime:latest
+    container_name: arkime
+    hostname: arkime
+    ports:
+      - "8005:8005"
+      - "8006:8006"
+    environment:
+      - ARKIME_INTERFACE=eth0
+      - ARKIME_ELASTICSEARCH=http://elasticsearch:9200
+      - ARKIME_PASSWORD=admin
+      - ARKIME_ADMIN_PASSWORD=admin
+    volumes:
+      - ./arkime/config:/opt/arkime/etc
+      - ./arkime/logs:/opt/arkime/logs
+      - ./arkime/data:/opt/arkime/raw
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+    depends_on:
+      - elasticsearch
+
+  # Suricata
+  suricata:
+    image: jasonish/suricata:latest
+    container_name: suricata
+    hostname: suricata
+    volumes:
+      - ./suricata/etc:/etc/suricata
+      - ./suricata/logs:/var/log/suricata
+      - /etc/localtime:/etc/localtime:ro
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+    restart: unless-stopped
+    command: -i eth0 --user 0:0
+
+  # CALDERA
+  caldera:
+    image: mitre/caldera:latest
+    container_name: caldera
+    hostname: caldera
+    ports:
+      - "8888:8888"
+      - "7010:7010"
+    environment:
+      - CALDERA_ADMIN_PASSWORD=admin
+      - CALDERA_ADMIN_USER=admin
+      - CALDERA_APP_CONTACT_HTTP=0.0.0.0:8888
+      - CALDERA_APP_API_HTTP=0.0.0.0:8888
+    volumes:
+      - ./caldera/data:/root/.caldera
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+
+  # Wireshark
+  wireshark:
+    image: lscr.io/linuxserver/wireshark:latest
+    container_name: wireshark
+    hostname: wireshark
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./wireshark/config:/config
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+
+  # Filebeat
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.17.0
+    container_name: filebeat
+    user: root
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --strict.perms=false
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+    depends_on:
+      - elasticsearch
+      - kibana
+
+  # Portainer
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    ports:
+      - "9443:9443"
+      - "9000:9000"
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/api/status"]
       interval: 30s
       timeout: 10s
       retries: 3
-
-  # Add other services following the same pattern...
-
-  # ========== Traefik for Reverse Proxy ==========
-  traefik:
-    image: traefik:v2.5
-    container_name: traefik
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.leresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.leresolver.acme.email=${LETSENCRYPT_EMAIL}"
-      - "--certificatesresolvers.leresolver.acme.storage=/letsencrypt/acme.json"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"  # Dashboard
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/letsencrypt:/letsencrypt
+      start_period: 20s
     networks:
-      - soc_network
-    restart: unless-stopped
+      - cyber-blue
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 512M
+
+networks:
+  cyber-blue:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+
+volumes:
+  portainer_data:
+  elasticsearch_data:
+  thehive_data:
+  cortex_data:
+  graylog_data:
+  mongo_data:
+  arkime_data:
+  suricata_data:
+  caldera_data:
+  wireshark_data:
+
+# Resource constraints for all services
+x-defaults: &defaults
+  restart: unless-stopped
+  deploy:
+    resources:
+      limits:
+        cpus: '1'
+        memory: 2G
+      reservations:
+        cpus: '0.5'
+        memory: 1G

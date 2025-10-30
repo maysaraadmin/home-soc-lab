@@ -1,0 +1,68 @@
+services:
+  portal:
+    build:
+      context: ../portal
+      dockerfile: Dockerfile
+    container_name: cyber-blue-portal
+    ports:
+      - "5500:5500"
+      - "5443:5443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../portal/logs:/app/logs
+      - ../portal/ssl:/app/ssl:ro
+      - ../velociraptor:/velociraptor
+      - ../wazuh/agents:/wazuh/agents
+      - ../fleet/agents:/fleet/agents
+      - ../caldera/agents:/caldera/agents
+      - ../yara-rules:/opt/yara-rules
+      - ../sigma-rules:/opt/sigma-rules
+      - ../logs:/var/log
+    environment:
+      - PORT=5500
+      - HTTPS_PORT=5443
+      - FLASK_ENV=production
+      - HOST_IP=${HOST_IP}
+      - CYBERBLUE_INSTALL_DIR=${CYBERBLUE_INSTALL_DIR:-/home/ubuntu/CyberBlue}
+      - CYBERBLUE_INSTALL_USER=${CYBERBLUE_INSTALL_USER:-ubuntu}
+      - ENABLE_HTTPS=true
+      - SSL_CERT_PATH=/app/ssl/cert.pem
+      - SSL_KEY_PATH=/app/ssl/key.pem
+      - SECRET_KEY=cyberblue-secure-secret-key-change-in-production
+      - ADMIN_PASSWORD=cyberblue123
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:latest
+    restart: unless-stopped
+    ports:
+      - "9443:9443"
+      - "8001:8000" # Changed to avoid conflict with Velociraptor
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - cyber-blue
+
+  mitre-navigator:
+    build:
+      context: ../attack-navigator
+      dockerfile: Dockerfile
+    container_name: mitre-navigator
+    ports:
+      - "7013:4200"
+    restart: unless-stopped
+    networks:
+      - cyber-blue
+
+  cyberchef:
+    image: mpepping/cyberchef
+    container_name: cyberchef
+    restart: unless-stopped
+    ports:
+      - "7004:8000"
+    networks:
+      - cyber-blue

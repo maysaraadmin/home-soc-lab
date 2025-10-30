@@ -1,0 +1,54 @@
+services:
+  fleet-redis:
+    image: redis:6.2
+    container_name: fleet-redis
+    restart: always
+    ports:
+      - "6390:6379"
+    networks:
+      - cyber-blue
+
+  fleet-mysql:
+    image: mysql:8.0
+    container_name: fleet-mysql
+    restart: always
+    command: --innodb-buffer-pool-size=1024M --innodb-flush-log-at-trx-commit=2 --skip-log-bin --innodb-log-file-size=256M --innodb-log-buffer-size=64M
+    environment:
+      MYSQL_ROOT_PASSWORD: fleetroot
+      MYSQL_DATABASE: fleet
+      MYSQL_USER: fleet
+      MYSQL_PASSWORD: fleetpass
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-pfleetroot" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - fleet-mysql-data:/var/lib/mysql
+    networks:
+      - cyber-blue
+
+  fleet-server:
+    image: fleetdm/fleet:latest
+    container_name: fleet-server
+    depends_on:
+      fleet-mysql:
+        condition: service_healthy
+      fleet-redis:
+        condition: service_started
+    ports:
+      - "7007:8080" # Fleet Web UI
+    environment:
+      FLEET_MYSQL_USERNAME: fleet
+      FLEET_MYSQL_PASSWORD: fleetpass
+      FLEET_MYSQL_DATABASE: fleet
+      FLEET_MYSQL_ADDRESS: fleet-mysql:3306
+      FLEET_REDIS_ADDRESS: fleet-redis:6379
+      FLEET_SERVER_ADDRESS: 0.0.0.0:8080
+      FLEET_APP_URL: http://localhost:9010
+      FLEET_SERVER_TLS: "false"
+    volumes:
+      - fleet-server-data:/var/lib/fleet
+    restart: unless-stopped
+    networks:
+      - cyber-blue

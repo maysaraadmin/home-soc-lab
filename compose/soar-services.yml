@@ -1,0 +1,25 @@
+services:
+  thehive:
+    image: strangebee/thehive:5.3.9-1
+    container_name: thehive
+    restart: unless-stopped
+    ports:
+      - "7005:9000"
+    networks:
+      - cyber-blue
+
+  cortex:
+    image: thehiveproject/cortex:latest
+    container_name: cortex
+    environment:
+      - job_directory=${job_directory}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    #  - ${job_directory}:${job_directory}
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:7006:9001"
+    networks:
+      - cyber-blue
